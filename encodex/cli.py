@@ -100,8 +100,7 @@ def _initialize_genai_client() -> genai.Client:
         print("Error: GEMINI_API_KEY environment variable not set.", file=sys.stderr)
         sys.exit(1)
 
-    # Set a timeout of 180 seconds (3 minutes)
-    http_options = HttpOptions(timeout=180.0)
+    # http_options = HttpOptions(timeout=180.0) # Removed as per user feedback
     return genai.Client(api_key=api_key)
 
 
@@ -125,6 +124,37 @@ def list_uploaded_files() -> None:
         sys.exit(1)
 
 
+def delete_all_files() -> None:
+    """Deletes all files previously uploaded via the File API."""
+    try:
+        client = _initialize_genai_client()
+        print("Attempting to delete all uploaded files...")
+        deleted_count = 0
+        failed_count = 0
+        files_to_delete = list(client.files.list()) # Get the list first
+
+        if not files_to_delete:
+            print("No files found to delete.")
+            return
+
+        for f in files_to_delete:
+            try:
+                print(f"  Deleting file: {f.name} (URI: {f.uri})...", end="")
+                client.files.delete(name=f.name)
+                print(" Done.")
+                deleted_count += 1
+            except Exception as delete_error:
+                print(f" Failed. Error: {delete_error}")
+                failed_count += 1
+
+        print("-" * 20)
+        print(f"Deletion summary: {deleted_count} deleted, {failed_count} failed.")
+
+    except Exception as e:
+        print(f"An error occurred during the deletion process: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main() -> None:
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(description="Analyze video content or list uploaded files using Generative AI.")
@@ -139,18 +169,36 @@ def main() -> None:
         action="store_true",
         help="List all files previously uploaded via the File API.",
     )
+    parser.add_argument(
+        "--delete-all-files",
+        action="store_true",
+        help="Delete all files previously uploaded via the File API.",
+    )
     args = parser.parse_args()
 
+    # Ensure mutual exclusivity
+    action_count = sum([args.list_files, args.delete_all_files, bool(args.video_path)])
+    if action_count > 1:
+        parser.print_help()
+        print("\nError: Only one action (analyze video, --list-files, or --delete-all-files) can be specified at a time.", file=sys.stderr)
+        sys.exit(1)
+    elif action_count == 0:
+        parser.print_help()
+        print("\nError: You must specify an action (video_path, --list-files, or --delete-all-files).", file=sys.stderr)
+        sys.exit(1)
+
+
     if args.list_files:
-        if args.video_path:
-            print("Warning: video_path argument ignored when --list-files is used.", file=sys.stderr)
         list_uploaded_files()
+    elif args.delete_all_files:
+        # Add a confirmation step? For now, just proceed.
+        delete_all_files()
     elif args.video_path:
         analyze_video(args.video_path)
-    else:
-        parser.print_help()
-        print("\nError: Either video_path or --list-files must be provided.", file=sys.stderr)
-        sys.exit(1)
+    # The 'else' case for no action is handled by the check above
+
+
+if __name__ == "__main__":
 
 
 if __name__ == "__main__":
