@@ -4,7 +4,7 @@ import sys
 import time
 
 from google import genai
-from google.ai.generativelanguage import HttpOptions
+from google.genai.types import HttpOptions
 
 ANALYSIS_PROMPT = """
 Analyze this video sample and provide a structured assessment of the following
