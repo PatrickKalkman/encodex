@@ -5,7 +5,6 @@ import time
 
 from google import genai
 
-
 ANALYSIS_PROMPT = """
 Analyze this video sample and provide a structured assessment of the following
 content characteristics that impact video compression efficiency. For each
@@ -83,7 +82,7 @@ def analyze_video(video_path: str) -> None:
                 ANALYSIS_PROMPT,  # The analysis prompt
             ],
             # generation_config seems invalid here, rely on prompt for JSON format
-            request_options=request_options,  # Apply the timeout here
+            # request_options=request_options,  # Apply the timeout here
         )
 
         # Process the response
