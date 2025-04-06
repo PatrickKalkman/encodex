@@ -35,19 +35,12 @@ def analyze_video(video_path: str) -> None:
     Args:
         video_path: The path to the video file.
     """
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("Error: GEMINI_API_KEY environment variable not set.", file=sys.stderr)
-        sys.exit(1)
-
     if not os.path.exists(video_path):
         print(f"Error: Video file not found at {video_path}", file=sys.stderr)
         sys.exit(1)
 
     try:
-        # Set a timeout of 180 seconds (3 minutes)
-        http_options = HttpOptions(timeout=180.0)
-        client = genai.Client(api_key=api_key, http_options=http_options)
+        client = _initialize_genai_client()
 
         print(f"Uploading file: {video_path}...")
         # TODO: Add more specific error handling for file upload
@@ -97,13 +90,64 @@ def analyze_video(video_path: str) -> None:
         sys.exit(1)
 
 
+def _initialize_genai_client() -> genai.Client:
+    """Initializes and returns the Google Generative AI client."""
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("Error: GEMINI_API_KEY environment variable not set.", file=sys.stderr)
+        sys.exit(1)
+
+    # Set a timeout of 180 seconds (3 minutes)
+    http_options = HttpOptions(timeout=180.0)
+    return genai.Client(api_key=api_key, http_options=http_options)
+
+
+def list_uploaded_files() -> None:
+    """Lists files previously uploaded via the File API."""
+    try:
+        client = _initialize_genai_client()
+        print("Listing uploaded files:")
+        count = 0
+        for f in client.files.list():
+            print(f"  - Name: {f.name}")
+            print(f"    URI: {f.uri}")
+            print(f"    State: {f.state.name}")
+            print(f"    Expiration: {f.expiration_time}")
+            print("-" * 20)
+            count += 1
+        if count == 0:
+            print("  No files found.")
+    except Exception as e:
+        print(f"An error occurred while listing files: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main() -> None:
     """Main entry point for the CLI."""
-    parser = argparse.ArgumentParser(description="Analyze video content characteristics using Generative AI.")
-    parser.add_argument("video_path", help="Path to the video file to analyze.")
+    parser = argparse.ArgumentParser(description="Analyze video content or list uploaded files using Generative AI.")
+    parser.add_argument(
+        "video_path",
+        nargs="?",
+        default=None,
+        help="Path to the video file to analyze. Required unless --list-files is used.",
+    )
+    parser.add_argument(
+        "--list-files",
+        action="store_true",
+        help="List all files previously uploaded via the File API.",
+    )
     args = parser.parse_args()
 
-    analyze_video(args.video_path)
+    if args.list_files:
+        if args.video_path:
+            print("Warning: video_path argument ignored when --list-files is used.", file=sys.stderr)
+        list_uploaded_files()
+    elif args.video_path:
+        analyze_video(args.video_path)
+    else:
+        parser.print_help()
+        print("\nError: Either video_path or --list-files must be provided.", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
