@@ -51,7 +51,7 @@ def analyze_video(video_path: str) -> None:
         uploaded_file = client.files.upload(file=video_path)
         print(f"Uploaded file: {uploaded_file.name}")
 
-        model = "gemini-1.5-pro-latest"  # Using the latest recommended model for video
+        model = "gemini-2.5-pro-preview-03-25"
         print(f"Generating analysis using model: {model}...")
 
         # Generate content using the uploaded file and the prompt
