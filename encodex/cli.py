@@ -50,7 +50,8 @@ def analyze_video(video_path: str) -> None:
         # Set a longer timeout (e.g., 600 seconds = 10 minutes)
         request_options = {"timeout": 600}
         # TODO: Add more specific error handling for file upload
-        uploaded_file = client.files.upload(file=video_path, request_options=request_options)
+        # request_options is not valid for files.upload
+        uploaded_file = client.files.upload(file=video_path)
         print(f"Uploaded file: {uploaded_file.name}")
 
         model = "gemini-2.5-pro-preview-03-25"
