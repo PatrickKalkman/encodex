@@ -1,10 +1,16 @@
 import argparse
 import os
+import argparse
+import os
 import sys
 import time
+import traceback # Ensure traceback is imported at the top
 
 from google import genai
 from google.genai.types import HttpOptions
+from google.api_core import exceptions as google_exceptions
+# Import requests exceptions if you suspect lower-level HTTP issues
+# import requests.exceptions
 
 ANALYSIS_PROMPT = """
 Analyze this video sample and provide a structured assessment of the following
