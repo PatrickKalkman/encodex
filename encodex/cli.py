@@ -97,8 +97,8 @@ def analyze_video(input_source: str) -> None:
 
         print("Video file is active and ready for analysis.")
         # --- Content Generation ---
-        model = "gemini-1.5-pro-latest"  # Using a more stable model as default
-        # model = "gemini-2.5-pro-preview-03-25" # Keep if you specifically need this preview
+        # model = "gemini-1.5-pro-latest"  # Using a more stable model as default
+        model = "gemini-2.5-pro-preview-03-25" # Keep if you specifically need this preview
         print(f"Generating analysis using model: {model}...")
 
         try:
