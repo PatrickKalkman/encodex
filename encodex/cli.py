@@ -82,10 +82,8 @@ def analyze_video(video_path: str) -> None:
                 uploaded_file,  # Reference to the uploaded video
                 ANALYSIS_PROMPT,  # The analysis prompt
             ],
-            generation_config=genai.types.GenerationConfig(
-                response_mime_type="application/json"  # Request JSON output
-            ),
-            request_options=request_options,  # Apply the same timeout here
+            # generation_config seems invalid here, rely on prompt for JSON format
+            request_options=request_options,  # Apply the timeout here
         )
 
         # Process the response
