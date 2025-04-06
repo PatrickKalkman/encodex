@@ -1,15 +1,13 @@
 import argparse
 import os
+
+# Import requests exceptions if you suspect lower-level HTTP issues
+# import requests.exceptions
+import re  # Add import for regex
 import sys
 import time
 
 from google import genai
-from google.genai.types import HttpOptions
-
-# Import requests exceptions if you suspect lower-level HTTP issues
-# import requests.exceptions
-
-import re # Add import for regex
 
 ANALYSIS_PROMPT = """
 Analyze this video sample and provide a structured assessment of the following
@@ -57,14 +55,14 @@ def analyze_video(input_source: str) -> None:
                 print(f"Found file: {video_file.name} (State: {video_file.state.name})")
                 # No need to wait for processing if it's already ACTIVE
                 if video_file.state.name == "PROCESSING":
-                     print("File is still processing, please wait and try again later or wait here.")
-                     # Optional: Add waiting loop here if desired, similar to upload
-                     while video_file.state.name == "PROCESSING":
-                         time.sleep(5)
-                         video_file = client.files.get(name=video_file.name)
-                         print(f"File state: {video_file.state.name}")
+                    print("File is still processing, please wait and try again later or wait here.")
+                    # Optional: Add waiting loop here if desired, similar to upload
+                    while video_file.state.name == "PROCESSING":
+                        time.sleep(5)
+                        video_file = client.files.get(name=video_file.name)
+                        print(f"File state: {video_file.state.name}")
 
-            except Exception as e: # Catch specific errors? e.g. NotFound
+            except Exception as e:  # Catch specific errors? e.g. NotFound
                 print(f"Error retrieving file URI {input_source}: {e}", file=sys.stderr)
                 sys.exit(1)
 
@@ -82,21 +80,24 @@ def analyze_video(input_source: str) -> None:
                 print(f"File state: {video_file.state.name}")
         else:
             print(f"Error: Input source not found or invalid: {input_source}", file=sys.stderr)
-            print("Please provide a valid local file path or a Gemini File API URI (e.g., 'files/xyz123').", file=sys.stderr)
+            print(
+                "Please provide a valid local file path or a Gemini File API URI (e.g., 'files/xyz123').",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
         # Check final state after upload/retrieval
         if video_file.state.name != "ACTIVE":
             print(f"Error: Video file is not active. Final state: {video_file.state.name}", file=sys.stderr)
-            if video_file.state.name == "FAILED" and hasattr(video_file, 'error') and video_file.error:
-                 print(f"Reason: {video_file.error.message}", file=sys.stderr)
+            if video_file.state.name == "FAILED" and hasattr(video_file, "error") and video_file.error:
+                print(f"Reason: {video_file.error.message}", file=sys.stderr)
             # Optionally delete the failed upload/file?
             # client.files.delete(name=video_file.name)
             sys.exit(1)
 
         print("Video file is active and ready for analysis.")
         # --- Content Generation ---
-        model = "gemini-1.5-pro-latest" # Using a more stable model as default
+        model = "gemini-1.5-pro-latest"  # Using a more stable model as default
         # model = "gemini-2.5-pro-preview-03-25" # Keep if you specifically need this preview
         print(f"Generating analysis using model: {model}...")
 
@@ -121,7 +122,7 @@ def analyze_video(input_source: str) -> None:
             # Suggest reusing the file if generation failed but file is active
             if video_file and video_file.state.name == "ACTIVE":
                 print(f"\nThe video file '{video_file.name}' is processed and active.", file=sys.stderr)
-                print(f"You can try analyzing it again later using its URI:", file=sys.stderr)
+                print("You can try analyzing it again later using its URI:", file=sys.stderr)
                 print(f"  python -m encodex.cli {video_file.name}", file=sys.stderr)
             sys.exit(1)
 
@@ -169,7 +170,7 @@ def delete_all_files() -> None:
         print("Attempting to delete all uploaded files...")
         deleted_count = 0
         failed_count = 0
-        files_to_delete = list(client.files.list()) # Get the list first
+        files_to_delete = list(client.files.list())  # Get the list first
 
         if not files_to_delete:
             print("No files found to delete.")
@@ -197,15 +198,15 @@ def main() -> None:
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
         description="Analyze video content using Generative AI, list, or delete uploaded files.",
-        formatter_class=argparse.RawTextHelpFormatter # Keep formatting in help
+        formatter_class=argparse.RawTextHelpFormatter,  # Keep formatting in help
     )
     parser.add_argument(
         "input_source",
         nargs="?",
         default=None,
         help="Path to the local video file to analyze OR\n"
-             "the URI of a previously uploaded file (e.g., 'files/xyz123').\n"
-             "Required unless using --list-files or --delete-all-files.",
+        "the URI of a previously uploaded file (e.g., 'files/xyz123').\n"
+        "Required unless using --list-files or --delete-all-files.",
     )
     parser.add_argument(
         "--list-files",
@@ -223,13 +224,17 @@ def main() -> None:
     action_count = sum([args.list_files, args.delete_all_files, bool(args.input_source)])
     if action_count > 1:
         parser.print_help()
-        print("\nError: Only one action (analyze video/URI, --list-files, or --delete-all-files) can be specified at a time.", file=sys.stderr)
+        print(
+            "\nError: Only one action (analyze video/URI, --list-files, or --delete-all-files) can be specified at a time.",
+            file=sys.stderr,
+        )
         sys.exit(1)
     elif action_count == 0:
         parser.print_help()
-        print("\nError: You must specify an action (input_source, --list-files, or --delete-all-files).", file=sys.stderr)
+        print(
+            "\nError: You must specify an action (input_source, --list-files, or --delete-all-files).", file=sys.stderr
+        )
         sys.exit(1)
-
 
     if args.list_files:
         list_uploaded_files()
