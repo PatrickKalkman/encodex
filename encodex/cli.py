@@ -52,8 +52,24 @@ def analyze_video(video_path: str) -> None:
         # TODO: Add more specific error handling for file upload
         # request_options is not valid for files.upload
         uploaded_file = client.files.upload(file=video_path)
-        print(f"Uploaded file: {uploaded_file.name}")
+        print(f"Uploaded file: {uploaded_file.name} (State: {uploaded_file.state.name})")
 
+        # Wait for the video to be processed.
+        while uploaded_file.state.name == "PROCESSING":
+            print("Processing video...")
+            # Wait a few seconds before checking the status again.
+            time.sleep(5)
+            # Get the latest status of the file.
+            uploaded_file = client.files.get(name=uploaded_file.name)
+            print(f"File state: {uploaded_file.state.name}")
+
+        if uploaded_file.state.name != "ACTIVE":
+            print(f"Error: Video processing failed. Final state: {uploaded_file.state.name}", file=sys.stderr)
+            # Optionally delete the failed upload
+            # client.files.delete(name=uploaded_file.name)
+            sys.exit(1)
+
+        print("Video processing complete.")
         model = "gemini-2.5-pro-preview-03-25"
         print(f"Generating analysis using model: {model}...")
 
