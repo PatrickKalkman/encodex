@@ -4,6 +4,7 @@ import sys
 import time
 
 from google import genai
+from google.ai.generativelanguage import HttpOptions
 
 ANALYSIS_PROMPT = """
 Analyze this video sample and provide a structured assessment of the following
@@ -44,13 +45,12 @@ def analyze_video(video_path: str) -> None:
         sys.exit(1)
 
     try:
-        client = genai.Client(api_key=api_key)
+        # Set a timeout of 180 seconds (3 minutes)
+        http_options = HttpOptions(timeout=180.0)
+        client = genai.Client(api_key=api_key, http_options=http_options)
 
         print(f"Uploading file: {video_path}...")
-        # Set a longer timeout (e.g., 600 seconds = 10 minutes)
-        request_options = {"timeout": 600}
         # TODO: Add more specific error handling for file upload
-        # request_options is not valid for files.upload
         uploaded_file = client.files.upload(file=video_path)
         print(f"Uploaded file: {uploaded_file.name} (State: {uploaded_file.state.name})")
 
@@ -82,7 +82,6 @@ def analyze_video(video_path: str) -> None:
                 ANALYSIS_PROMPT,  # The analysis prompt
             ],
             # generation_config seems invalid here, rely on prompt for JSON format
-            # request_options=request_options,  # Apply the timeout here
         )
 
         # Process the response
