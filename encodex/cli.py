@@ -47,8 +47,10 @@ def analyze_video(video_path: str) -> None:
         client = genai.Client(api_key=api_key)
 
         print(f"Uploading file: {video_path}...")
-        # TODO: Add error handling for file upload
-        uploaded_file = client.files.upload(file=video_path)
+        # Set a longer timeout (e.g., 600 seconds = 10 minutes)
+        request_options = {"timeout": 600}
+        # TODO: Add more specific error handling for file upload
+        uploaded_file = client.files.upload(file=video_path, request_options=request_options)
         print(f"Uploaded file: {uploaded_file.name}")
 
         model = "gemini-2.5-pro-preview-03-25"
@@ -65,6 +67,7 @@ def analyze_video(video_path: str) -> None:
             generation_config=genai.types.GenerationConfig(
                 response_mime_type="application/json"  # Request JSON output
             ),
+            request_options=request_options,  # Apply the same timeout here
         )
 
         # Process the response
