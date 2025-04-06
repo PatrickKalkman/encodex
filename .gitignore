@@ -175,3 +175,4 @@ cython_debug/
 testing
 research
 .DS_Store
+.aider*

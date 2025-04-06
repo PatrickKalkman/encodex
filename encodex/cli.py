@@ -1,14 +1,11 @@
 import argparse
 import os
-import argparse
-import os
 import sys
 import time
-import traceback # Ensure traceback is imported at the top
 
 from google import genai
 from google.genai.types import HttpOptions
-from google.api_core import exceptions as google_exceptions
+
 # Import requests exceptions if you suspect lower-level HTTP issues
 # import requests.exceptions
 
@@ -105,7 +102,7 @@ def _initialize_genai_client() -> genai.Client:
 
     # Set a timeout of 180 seconds (3 minutes)
     http_options = HttpOptions(timeout=180.0)
-    return genai.Client(api_key=api_key, http_options=http_options)
+    return genai.Client(api_key=api_key)
 
 
 def list_uploaded_files() -> None:
