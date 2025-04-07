@@ -64,7 +64,7 @@ def create_low_res_preview(state: EncodExState, use_gpu: bool = False) -> EncodE
                 "h264_videotoolbox",
                 "-b:v",
                 "500k",  # Target bitrate for low-res preview
-                "-allow_sw",  # Allow software fallback if hardware fails? Check ffmpeg docs
+                "-allow_sw", "1", # Enable software fallback (provide value '1')
                 # Note: '-crf' and '-preset' are not typically used with videotoolbox
             ]
         else:
