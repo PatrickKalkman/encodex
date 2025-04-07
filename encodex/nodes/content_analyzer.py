@@ -6,11 +6,17 @@ import json
 import os
 import re
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional # Added List
 
 from google import genai
 
-from encodex.graph_state import AnimationType, ContentAnalysis, ContentCharacteristic, EncodExState
+from encodex.graph_state import ( # Grouped imports
+    AnimationType,
+    ContentAnalysis,
+    ContentCharacteristic,
+    EncodExState,
+    Segment, # Added Segment
+)
 
 # Regex to check if the input looks like a Gemini File API URI (e.g., "files/...")
 GEMINI_FILE_URI_PATTERN = r"^files\/[a-zA-Z0-9_-]+$"
@@ -158,6 +164,27 @@ def _parse_analysis_result(json_str: str) -> Dict[str, Any]:
         raise ValueError(f"Failed to parse JSON response: {e}")
 
 
+# Copied from segment_selector.py for self-containment
+def _parse_timestamp(timestamp_str: str) -> float:
+    """
+    Parse a timestamp string into seconds.
+    Handles formats like "HH:MM:SS.ms", "MM:SS.ms", or just "SS.ms".
+    """
+    parts = timestamp_str.strip().split(":")
+    try:
+        if len(parts) == 3:  # HH:MM:SS.ms
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
+        elif len(parts) == 2:  # MM:SS.ms
+            return int(parts[0]) * 60 + float(parts[1])
+        elif len(parts) == 1:  # SS.ms
+            return float(parts[0])
+        else:
+            raise ValueError(f"Invalid timestamp format: {timestamp_str}")
+    except ValueError as e:
+        print(f"Warning: Could not parse timestamp '{timestamp_str}': {e}. Returning 0.0")
+        return 0.0
+
+
 def _map_to_content_analysis(analysis_data: Dict[str, Any]) -> ContentAnalysis:
     """Map raw analysis data to ContentAnalysis model."""
     video_assessment = analysis_data.get("video_assessment", {})
@@ -292,14 +319,38 @@ def analyze_content(state: EncodExState) -> EncodExState:
             print("Using analysis result from the first successfully analyzed chunk.")
             result = all_results[0] # Assumes at least one chunk succeeded
 
-            # Map to ContentAnalysis model
+            # Map video assessment to ContentAnalysis model
             print("Mapping raw analysis data to ContentAnalysis model...")
             content_analysis = _map_to_content_analysis(result)
             print("Mapping successful.")
 
+            # Extract and map representative segments
+            print("Extracting and mapping representative segments...")
+            raw_segments = result.get("representative_segments", [])
+            selected_segments: List[Segment] = []
+            for raw_seg in raw_segments:
+                try:
+                    timestamp_range = raw_seg.get("timestamp_range", "0 - 0")
+                    start_str, end_str = timestamp_range.split(" - ")
+                    start_time = _parse_timestamp(start_str)
+                    end_time = _parse_timestamp(end_str)
+
+                    segment = Segment(
+                        complexity=raw_seg.get("complexity", "Unknown"),
+                        timestamp_range=timestamp_range,
+                        description=raw_seg.get("description", ""),
+                        start_time=start_time,
+                        end_time=end_time,
+                    )
+                    selected_segments.append(segment)
+                except Exception as seg_e:
+                    print(f"Warning: Could not parse segment data: {raw_seg}. Error: {seg_e}")
+            print(f"Extracted {len(selected_segments)} segments.")
+
             # Update state
-            print("Updating state with content analysis...")
+            print("Updating state with content analysis and selected segments...")
             state.content_analysis = content_analysis
+            state.selected_segments = selected_segments
             print("State updated.")
 
         else:
