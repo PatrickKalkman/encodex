@@ -48,7 +48,7 @@ def _initialize_genai_client() -> genai.Client:
     return genai.Client(api_key=api_key)
 
 
-def _upload_video_to_gemini(client: genai.Client, video_path: str) -> genai.FileObject:
+def _upload_video_to_gemini(client: genai.Client, video_path: str) -> Any:
     """Upload a video file to Gemini API."""
     print(f"Uploading {video_path} to Gemini API...")
     video_file = client.files.upload(file=video_path)
@@ -65,7 +65,7 @@ def _upload_video_to_gemini(client: genai.Client, video_path: str) -> genai.File
     return video_file
 
 
-def _analyze_with_gemini(client: genai.Client, video_file: genai.FileObject) -> str:
+def _analyze_with_gemini(client: genai.Client, video_file: Any) -> str:
     """Use Gemini API to analyze the video content."""
     model = "gemini-2.5-pro-preview-03-25"  # Using a specific model as in cli.py
     print(f"Generating analysis using model: {model}...")

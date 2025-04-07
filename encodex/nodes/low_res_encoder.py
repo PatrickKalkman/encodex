@@ -52,7 +52,7 @@ def create_low_res_preview(state: EncodExState, use_gpu: bool = False) -> EncodE
             "-i",
             input_file,
             "-vf",
-            "scale=-1:240",  # Scale to 240p preserving aspect ratio
+            "scale=trunc(oh*a/2)*2:240",  # Scale to 240p ensuring even width
         ]
 
         encoder_cmd = []
@@ -64,7 +64,7 @@ def create_low_res_preview(state: EncodExState, use_gpu: bool = False) -> EncodE
                 "h264_videotoolbox",
                 "-b:v",
                 "500k",  # Target bitrate for low-res preview
-                "-allow_sw", # Allow software fallback if hardware fails? Check ffmpeg docs
+                "-allow_sw",  # Allow software fallback if hardware fails? Check ffmpeg docs
                 # Note: '-crf' and '-preset' are not typically used with videotoolbox
             ]
         else:
@@ -81,7 +81,7 @@ def create_low_res_preview(state: EncodExState, use_gpu: bool = False) -> EncodE
                 "fast",  # Encoding speed preset
             ]
 
-        final_cmd = base_cmd + encoder_cmd + ["-an", low_res_path] # No audio
+        final_cmd = base_cmd + encoder_cmd + ["-an", low_res_path]  # No audio
 
         # Run FFmpeg
         print(f"Running FFmpeg command: {' '.join(final_cmd)}")
