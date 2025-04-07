@@ -7,6 +7,7 @@ encoding parameters to evaluate quality vs. bitrate tradeoffs.
 
 import logging
 import os
+import platform  # Add platform import
 import re  # Add re import for parsing progress
 import subprocess
 import sys  # Add sys import for stdout flushing
@@ -80,8 +81,13 @@ def _run_ffmpeg_command(cmd: List[str], duration_s: float) -> Optional[str]:
         return None # Success
 
 
-def _create_test_encoding(
-    input_file: str, segment: dict, resolution: str, bitrate: int, output_dir: str
+def _create_test_encoding( # noqa: PLR0913 Too many arguments
+    input_file: str,
+    segment: dict,
+    resolution: str,
+    bitrate: int,
+    output_dir: str,
+    use_gpu: bool = False,
 ) -> Optional[TestEncoding]:
     """
     Create a test encoding for a specific segment with given parameters.
@@ -117,35 +123,52 @@ def _create_test_encoding(
     # Calculate segment duration for progress
     segment_duration = segment["end_time"] - segment["start_time"]
 
-    # Build FFmpeg command
-    cmd = [
+    # Base FFmpeg command parts
+    base_cmd = [
         "ffmpeg",
-        "-progress", "pipe:1", # Add progress reporting to stdout
-        "-i",
-        input_file,
-        "-ss",
-        str(segment["start_time"]),
-        "-to",
-        str(segment["end_time"]),
-        "-c:v",
-        "libx264",
-        "-b:v",
-        f"{bitrate}k",
-        "-maxrate",
-        f"{maxrate}k",
-        "-bufsize",
-        f"{bufsize}k",
-        "-vf",
-        f"scale={width}:{height}",
-        "-preset",
-        "slow",  # Higher quality encoding for tests
+        "-progress", "pipe:1",
+        "-i", input_file,
+        "-ss", str(segment["start_time"]),
+        "-to", str(segment["end_time"]),
+    ]
+
+    # Video codec specific parts
+    encoder_cmd = []
+    if use_gpu and platform.system() == "Darwin":
+        logger.info("Attempting to use hardware encoder (h264_videotoolbox)...")
+        encoder_cmd = [
+            "-c:v", "h264_videotoolbox",
+            "-allow_sw", "1", # Enable software fallback
+            "-b:v", f"{bitrate}k",
+            "-maxrate", f"{maxrate}k", # Maxrate is supported
+            # Bufsize might not be directly applicable or behave differently
+            # Preset is not applicable
+        ]
+    else:
+        if use_gpu and platform.system() != "Darwin":
+            logger.warning("GPU acceleration requested, but only macOS VideoToolbox is currently supported. Falling back to CPU.")
+        logger.info("Using CPU encoder (libx264)...")
+        encoder_cmd = [
+            "-c:v", "libx264",
+            "-b:v", f"{bitrate}k",
+            "-maxrate", f"{maxrate}k",
+            "-bufsize", f"{bufsize}k",
+            "-preset", "slow", # Higher quality encoding for tests
+        ]
+
+    # Scaling and output parts
+    output_cmd = [
+        "-vf", f"scale={width}:{height}",
         "-an",  # No audio needed for test segments
         "-y",  # Overwrite existing files
         output_path,
     ]
 
+    # Combine command parts
+    final_cmd = base_cmd + encoder_cmd + output_cmd
+
     # Run FFmpeg command and capture potential error
-    error_message = _run_ffmpeg_command(cmd, segment_duration)
+    error_message = _run_ffmpeg_command(final_cmd, segment_duration)
 
     if error_message:  # Check if an error message string was returned
         # Progress line clearing is now handled within _run_ffmpeg_command after communicate()
@@ -161,12 +184,14 @@ def _create_test_encoding(
     return TestEncoding(path=output_path, resolution=resolution, bitrate=bitrate, segment=segment_id)
 
 
-def generate_test_encodings(state: EncodExState) -> EncodExState:
+def generate_test_encodings(state: EncodExState, use_gpu: bool = False) -> EncodExState:
     """
     Generates test encodings for selected segments.
 
     Args:
         state: Current workflow state
+        use_gpu: If True and on macOS, attempt to use the VideoToolbox hardware encoder.
+                 Defaults to False (uses libx264 CPU encoder).
 
     Returns:
         Updated workflow state with test encodings
@@ -247,6 +272,7 @@ def generate_test_encodings(state: EncodExState) -> EncodExState:
                 resolution=params["resolution"],
                 bitrate=params["bitrate"],
                 output_dir=output_dir,
+                use_gpu=use_gpu, # Pass the flag down
             )
 
             if encoding:
