@@ -72,6 +72,10 @@ def run_single_node(args):
             print(f"  Temporal Complexity: {analysis.temporal_complexity.score:.1f}")
             print(f"  Spatial Complexity: {analysis.spatial_complexity.score:.1f}")
             print(f"  Animation Type: {analysis.animation_type.type}")
+            if updated_state.selected_segments:
+                print("\nSelected Segments:")
+                for seg in updated_state.selected_segments:
+                    print(f"  - {seg.timestamp_range} ({seg.complexity}): {seg.description}")
 
     except Exception as e:
         print(f"Error running node {node_name}: {str(e)}", file=sys.stderr)

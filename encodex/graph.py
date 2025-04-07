@@ -15,7 +15,7 @@ from encodex.nodes.placeholder_nodes import (
     generate_recommendations,
     generate_test_encodings,
 )
-from encodex.nodes.segment_selector import select_segments
+# from encodex.nodes.segment_selector import select_segments # Removed
 from encodex.nodes.video_splitter import split_video
 
 
@@ -29,7 +29,7 @@ def create_graph():
     workflow.add_node("low_res_encoder", create_low_res_preview)
     workflow.add_node("video_splitter", split_video)
     workflow.add_node("content_analyzer", analyze_content)
-    workflow.add_node("segment_selector", select_segments)
+    # workflow.add_node("segment_selector", select_segments) # Removed
     workflow.add_node("test_encoding_generator", generate_test_encodings)
     workflow.add_node("quality_metrics_calculator", calculate_quality_metrics)
     workflow.add_node("data_aggregator", aggregate_data)
@@ -40,8 +40,8 @@ def create_graph():
     workflow.add_edge("input_processor", "low_res_encoder")
     workflow.add_edge("low_res_encoder", "video_splitter")
     workflow.add_edge("video_splitter", "content_analyzer")
-    workflow.add_edge("content_analyzer", "segment_selector")
-    workflow.add_edge("segment_selector", "test_encoding_generator")
+    # workflow.add_edge("content_analyzer", "segment_selector") # Removed
+    workflow.add_edge("content_analyzer", "test_encoding_generator") # Changed source
     workflow.add_edge("test_encoding_generator", "quality_metrics_calculator")
     workflow.add_edge("quality_metrics_calculator", "data_aggregator")
     workflow.add_edge("data_aggregator", "recommendation_engine")
@@ -61,7 +61,7 @@ def get_node_function(node_name: str):
         "low_res_encoder": create_low_res_preview,
         "video_splitter": split_video,
         "content_analyzer": analyze_content,
-        "segment_selector": select_segments,
+        # "segment_selector": select_segments, # Removed
         "test_encoding_generator": generate_test_encodings,
         "quality_metrics_calculator": calculate_quality_metrics,
         "data_aggregator": aggregate_data,

@@ -8,7 +8,7 @@ __version__ = "0.1.0"
 from encodex.nodes.content_analyzer import analyze_content
 from encodex.nodes.input_processor import process_input
 from encodex.nodes.low_res_encoder import create_low_res_preview
-from encodex.nodes.segment_selector import select_segments
+# from encodex.nodes.segment_selector import select_segments # Removed
 from encodex.nodes.video_splitter import split_video
 
 """
@@ -28,9 +28,8 @@ __all__ = [
     "analyze_content",
     "process_input",
     "create_low_res_preview",
-    "select_segments",
+    # "select_segments", # Removed
     "split_video",
-    # "select_segments",
     # "generate_test_encodings",
     # "calculate_quality_metrics",
     # "aggregate_data",
