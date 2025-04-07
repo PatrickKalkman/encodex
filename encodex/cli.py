@@ -3,6 +3,7 @@ Command-line interface for the EncodEx system.
 """
 
 import argparse
+import logging
 import os
 import sys
 import time
@@ -287,6 +288,13 @@ def analyze_video_directly(input_source):
 
 def main():
     """Main entry point for the CLI."""
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    logger = logging.getLogger(__name__) # Get logger for this module if needed
+    logger.info("EncodEx CLI started.")
+
     parser = argparse.ArgumentParser(
         description="EncodEx - AI-Driven Video Encoding Optimization System",
         formatter_class=argparse.RawDescriptionHelpFormatter,
