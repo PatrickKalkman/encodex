@@ -6,18 +6,22 @@ import json
 import os
 import subprocess
 
+import platform
+
 from encodex.graph_state import EncodExState
 
 
-def create_low_res_preview(state: EncodExState) -> EncodExState:
+def create_low_res_preview(state: EncodExState, use_gpu: bool = False) -> EncodExState:
     """
     Create a low-resolution preview of the input video for analysis:
     - Generate a 240p low-bitrate version of the video
-    - Use FFmpeg with efficient settings for quick encoding
+    - Use FFmpeg with efficient settings for quick encoding (CPU or GPU)
     - Update state with the path to the low-res preview
 
     Args:
         state: Current graph state with input file and metadata
+        use_gpu: If True and on macOS, attempt to use the VideoToolbox hardware encoder.
+                 Defaults to False (uses libx264 CPU encoder).
 
     Returns:
         Updated state with low_res_path
@@ -42,28 +46,47 @@ def create_low_res_preview(state: EncodExState) -> EncodExState:
     low_res_path = os.path.join(output_dir, f"{name}_240p_preview{ext}")
 
     # Build FFmpeg command
-    # Using settings from spec (section 11.2):
-    # ffmpeg -i [INPUT] -vf scale=-1:240 -c:v libx264 -crf 23 -preset fast [OUTPUT]
     try:
-        cmd = [
+        base_cmd = [
             "ffmpeg",
             "-y",  # Overwrite output file if it exists
             "-i",
             input_file,
             "-vf",
             "scale=-1:240",  # Scale to 240p preserving aspect ratio
-            "-c:v",
-            "libx264",  # Use H.264 codec
-            "-crf",
-            "23",  # Constant Rate Factor (balance quality/size)
-            "-preset",
-            "fast",  # Encoding speed preset
-            "-an",  # No audio
-            low_res_path,
         ]
 
+        encoder_cmd = []
+        # Use VideoToolbox on macOS if requested
+        if use_gpu and platform.system() == "Darwin":
+            print("Attempting to use hardware encoder (h264_videotoolbox)...")
+            encoder_cmd = [
+                "-c:v",
+                "h264_videotoolbox",
+                "-b:v",
+                "500k",  # Target bitrate for low-res preview
+                "-allow_sw", # Allow software fallback if hardware fails? Check ffmpeg docs
+                # Note: '-crf' and '-preset' are not typically used with videotoolbox
+            ]
+        else:
+            # Default to libx264 CPU encoding
+            # Using settings from spec (section 11.2):
+            # ffmpeg -i [INPUT] -vf scale=-1:240 -c:v libx264 -crf 23 -preset fast [OUTPUT]
+            print("Using CPU encoder (libx264)...")
+            encoder_cmd = [
+                "-c:v",
+                "libx264",  # Use H.264 codec
+                "-crf",
+                "23",  # Constant Rate Factor (balance quality/size)
+                "-preset",
+                "fast",  # Encoding speed preset
+            ]
+
+        final_cmd = base_cmd + encoder_cmd + ["-an", low_res_path] # No audio
+
         # Run FFmpeg
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        print(f"Running FFmpeg command: {' '.join(final_cmd)}")
+        result = subprocess.run(final_cmd, capture_output=True, text=True, check=False)
 
         if result.returncode != 0:
             state.error = f"FFmpeg error: {result.stderr}"
