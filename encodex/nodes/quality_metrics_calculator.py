@@ -6,12 +6,14 @@ by comparing them to the original source video.
 """
 
 import json
+import logging
 import os
 import subprocess
 import tempfile
 from typing import Dict, List, Optional, Tuple
-
 from encodex.graph_state import EncodExState, QualityMetric
+
+logger = logging.getLogger(__name__)
 
 
 def _run_ffmpeg_command(cmd: List[str]) -> Tuple[bool, str]:
@@ -24,11 +26,17 @@ def _run_ffmpeg_command(cmd: List[str]) -> Tuple[bool, str]:
     Returns:
         Tuple of (success_status, output_or_error)
     """
+    logger.debug("Running FFmpeg command: %s", " ".join(cmd))
     try:
-        result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        logger.debug("FFmpeg command successful. Stdout: %s", result.stdout)
         return True, result.stdout
     except subprocess.CalledProcessError as e:
+        logger.error("FFmpeg command failed. Stderr: %s", e.stderr)
         return False, f"FFmpeg error: {e.stderr}"
+    except FileNotFoundError:
+        logger.error("FFmpeg command not found. Make sure FFmpeg is installed and in the system PATH.")
+        return False, "FFmpeg command not found."
 
 
 def _calculate_vmaf(
@@ -46,6 +54,12 @@ def _calculate_vmaf(
     Returns:
         Dictionary with VMAF scores if successful, None otherwise
     """
+    logger.info(
+        "Calculating VMAF for %s (segment %s-%s)",
+        os.path.basename(test_encoding_path),
+        start_time,
+        start_time + duration,
+    )
     # Create temporary file for JSON output
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp_file:
         output_json = tmp_file.name
@@ -74,11 +88,12 @@ def _calculate_vmaf(
         # Run FFmpeg command
         success, output = _run_ffmpeg_command(cmd)
         if not success:
-            print(f"VMAF calculation failed: {output}")
+            logger.error("VMAF calculation failed for %s: %s", test_encoding_path, output)
             return None
 
         # Parse VMAF JSON output
-        with open(output_json, "r") as f:
+        logger.debug("Parsing VMAF JSON output from %s", output_json)
+        with open(output_json) as f:
             vmaf_data = json.load(f)
 
         # Extract VMAF score
@@ -87,13 +102,26 @@ def _calculate_vmaf(
         # Get PSNR if available
         psnr_y = vmaf_data.get("pooled_metrics", {}).get("psnr_y", {}).get("mean", None)
 
+        logger.info(
+            "Calculated metrics for %s: VMAF=%.2f, PSNR=%.2f",
+            os.path.basename(test_encoding_path),
+            vmaf_score if vmaf_score is not None else -1.0,
+            psnr_y if psnr_y is not None else -1.0,
+        )
         return {"vmaf": vmaf_score, "psnr": psnr_y}
 
+    except FileNotFoundError:
+        logger.error("VMAF JSON file not found: %s", output_json)
+        return None
+    except json.JSONDecodeError:
+        logger.error("Error decoding VMAF JSON from %s", output_json)
+        return None
     except Exception as e:
-        print(f"Error calculating VMAF: {str(e)}")
+        logger.exception("Unexpected error calculating VMAF for %s: %s", test_encoding_path, e)
         return None
     finally:
         # Clean up temporary file
+        logger.debug("Cleaning up temporary VMAF JSON file: %s", output_json)
         if os.path.exists(output_json):
             os.remove(output_json)
 
@@ -113,9 +141,10 @@ def _extract_segment_time_range(segment_id: str) -> Tuple[float, float]:
         start_time = float(parts[0])
         end_time = float(parts[1])
         duration = end_time - start_time
+        logger.debug("Extracted time range from segment ID '%s': start=%.3f, duration=%.3f", segment_id, start_time, duration)
         return start_time, duration
-    except (IndexError, ValueError) as e:
-        print(f"Error parsing segment ID '{segment_id}': {str(e)}")
+    except (IndexError, ValueError, TypeError) as e:
+        logger.error("Error parsing segment ID '%s': %s", segment_id, e)
         return 0.0, 0.0
 
 
@@ -129,24 +158,47 @@ def calculate_quality_metrics(state: EncodExState) -> EncodExState:
     Returns:
         Updated workflow state with quality metrics
     """
-    if not state.test_encodings:
-        state.error = "No test encodings available for quality metrics calculation"
+    logger.info("Starting quality metrics calculation node.")
+    if not state.input_file or not os.path.exists(state.input_file):
+        logger.error("Input file path is missing or invalid in state.")
+        state.error = "Input file path is missing or invalid for quality metrics calculation."
         return state
+
+    if not state.test_encodings:
+        logger.warning("No test encodings found in state. Skipping quality metrics calculation.")
+        state.error = "No test encodings available for quality metrics calculation"
+        # Return state without error if no encodings is not necessarily an error state?
+        # Or maybe set a specific status? For now, keep the error.
+        return state
+
+    logger.info("Found %d test encodings to process.", len(state.test_encodings))
 
     # Initialize quality metrics list
     state.quality_metrics = []
 
     # Calculate quality metrics for each test encoding
-    for encoding in state.test_encodings:
+    for i, encoding in enumerate(state.test_encodings):
+        logger.info("Processing encoding %d/%d: %s", i + 1, len(state.test_encodings), encoding.path)
+
+        if not encoding.path or not os.path.exists(encoding.path):
+            logger.warning("Skipping encoding %d: Path '%s' is invalid or file does not exist.", i + 1, encoding.path)
+            continue
+
         # Extract segment time range
         start_time, duration = _extract_segment_time_range(encoding.segment)
 
-        # Skip if we couldn't parse the segment ID
+        # Skip if we couldn't parse the segment ID or duration is invalid
         if duration <= 0:
-            print(f"Skipping quality metrics for encoding with invalid segment ID: {encoding.segment}")
+            logger.warning(
+                "Skipping quality metrics for encoding %s: Invalid segment ID '%s' or non-positive duration.",
+                encoding.path,
+                encoding.segment,
+            )
             continue
 
         # Calculate VMAF and PSNR
+        logger.debug("Calculating metrics for encoding: %s, original: %s, start: %.3f, duration: %.3f",
+                     encoding.path, state.input_file, start_time, duration)
         metrics = _calculate_vmaf(
             test_encoding_path=encoding.path,
             original_video_path=state.input_file,
@@ -154,21 +206,39 @@ def calculate_quality_metrics(state: EncodExState) -> EncodExState:
             duration=duration,
         )
 
-        # Skip if metrics calculation failed
-        if not metrics:
-            print(f"Skipping quality metrics for encoding {encoding.path} due to calculation failure")
+        # Skip if metrics calculation failed or returned None
+        if metrics is None:
+            logger.warning("Skipping quality metrics for encoding %s due to calculation failure or invalid result.", encoding.path)
             continue
 
         # Create quality metric object
+        encoding_id = os.path.basename(encoding.path)
+        vmaf_score = metrics.get("vmaf")
+        psnr_score = metrics.get("psnr")
+
+        if vmaf_score is None:
+            logger.warning("VMAF score is None for encoding %s. Skipping metric entry.", encoding_id)
+            continue # Or should we add with None? Depends on downstream requirements.
+
         quality_metric = QualityMetric(
-            encoding_id=os.path.basename(encoding.path), vmaf=metrics["vmaf"], psnr=metrics["psnr"]
+            encoding_id=encoding_id,
+            vmaf=vmaf_score,
+            psnr=psnr_score # PSNR can be None if not available in VMAF output
         )
+        logger.debug("Created QualityMetric: %s", quality_metric)
 
         # Add to quality metrics list
         state.quality_metrics.append(quality_metric)
 
     # Check if we successfully calculated any quality metrics
     if not state.quality_metrics:
+        logger.warning("Failed to calculate quality metrics for any test encoding.")
         state.error = "Failed to calculate quality metrics for any test encoding"
+    else:
+        logger.info("Successfully calculated quality metrics for %d encodings.", len(state.quality_metrics))
+        # Clear error if previously set and we have some results now
+        if state.error == "Failed to calculate quality metrics for any test encoding":
+             state.error = None
 
+    logger.info("Finished quality metrics calculation node.")
     return state
