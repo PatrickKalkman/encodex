@@ -8,7 +8,7 @@ encoding parameters to evaluate quality vs. bitrate tradeoffs.
 import logging
 import os
 import subprocess
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from encodex.graph_state import EncodExState, TestEncoding
 
