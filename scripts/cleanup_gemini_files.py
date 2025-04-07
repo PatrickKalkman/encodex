@@ -18,12 +18,7 @@ import os
 import re
 import sys
 
-try:
-    import google.generativeai as genai
-except ImportError:
-    print("Error: google-generativeai library not found.")
-    print("Please install it: pip install google-generativeai")
-    sys.exit(1)
+from google import genai
 
 # Regex to extract the file ID from the URI (e.g., files/xxxx -> xxxx)
 # Handles both full URLs and just the 'files/...' part
@@ -63,9 +58,7 @@ def delete_gemini_file(client: genai.Client, file_id: str) -> bool:
 
 def main():
     """Main function to parse arguments and delete files."""
-    parser = argparse.ArgumentParser(
-        description="Delete Gemini files listed in an EncodEx state JSON file."
-    )
+    parser = argparse.ArgumentParser(description="Delete Gemini files listed in an EncodEx state JSON file.")
     parser.add_argument(
         "state_file",
         help="Path to the EncodEx JSON state file containing the chunk_uri_map.",
@@ -137,7 +130,7 @@ def main():
     print(f"  Failed to delete (or invalid URI): {fail_count}")
 
     if fail_count > 0:
-        sys.exit(1) # Exit with error code if any deletions failed
+        sys.exit(1)  # Exit with error code if any deletions failed
 
 
 if __name__ == "__main__":

@@ -3,7 +3,6 @@ Content analyzer node for analyzing video content using Google Gemini.
 """
 
 import json
-import math # Add math for formatting if needed
 import os
 import re
 import time
@@ -472,9 +471,9 @@ def analyze_content(state: EncodExState) -> EncodExState:
     if state.chunk_uri_map is None:
         print("Warning: chunk_uri_map not found in state, initializing.")
         state.chunk_uri_map = {}
-    if state.chunk_start_times is None: # Should be initialized by splitter now
-         print("Warning: chunk_start_times not found in state, initializing.")
-         state.chunk_start_times = {}
+    if state.chunk_start_times is None:  # Should be initialized by splitter now
+        print("Warning: chunk_start_times not found in state, initializing.")
+        state.chunk_start_times = {}
 
     try:
         print("Initializing Gemini client...")
@@ -583,7 +582,9 @@ def analyze_content(state: EncodExState) -> EncodExState:
 
                 # --- Adjust Segment Timestamps ---
                 if "representative_segments" in analysis_data:
-                    print(f"Adjusting timestamps for {len(analysis_data['representative_segments'])} segments by {chunk_start_offset:.3f}s...")
+                    print(
+                        f"Adjusting timestamps for {len(analysis_data['representative_segments'])} segments by {chunk_start_offset:.3f}s..."
+                    )
                     adjusted_segments = []
                     for raw_seg in analysis_data["representative_segments"]:
                         try:
@@ -600,11 +601,13 @@ def analyze_content(state: EncodExState) -> EncodExState:
                             # Update the segment dictionary with absolute times string
                             raw_seg["timestamp_range"] = f"{format_seconds(abs_start)} - {format_seconds(abs_end)}"
                             adjusted_segments.append(raw_seg)
-                            print(f"  Adjusted segment: {raw_seg.get('description', 'N/A')[:30]}... -> {raw_seg['timestamp_range']}")
+                            print(
+                                f"  Adjusted segment: {raw_seg.get('description', 'N/A')[:30]}... -> {raw_seg['timestamp_range']}"
+                            )
 
                         except Exception as seg_e:
                             print(f"  Warning: Could not parse/adjust segment timestamp '{ts_range}': {seg_e}")
-                            adjusted_segments.append(raw_seg) # Keep original if parsing fails
+                            adjusted_segments.append(raw_seg)  # Keep original if parsing fails
 
                     analysis_data["representative_segments"] = adjusted_segments
                 # --- End Adjust Segment Timestamps ---
@@ -615,8 +618,8 @@ def analyze_content(state: EncodExState) -> EncodExState:
                 all_results.append(analysis_data)
 
             except ValueError as parse_e:
-                 print(f"Error parsing analysis result for {chunk_path}: {parse_e}")
-                 continue # Skip if parsing fails
+                print(f"Error parsing analysis result for {chunk_path}: {parse_e}")
+                continue  # Skip if parsing fails
 
             print(f"--- Finished processing chunk: {chunk_path} ---")
 
@@ -625,16 +628,18 @@ def analyze_content(state: EncodExState) -> EncodExState:
         if all_results:
             # Ensure chunk_durations has the same length as all_results
             if len(chunk_durations) != len(all_results):
-                 print(f"Warning: Mismatch between results ({len(all_results)}) and durations ({len(chunk_durations)}). Using equal weights for aggregation.")
-                 # Fallback to equal weights if durations are inconsistent
-                 num_results = len(all_results)
-                 if num_results > 0:
-                     chunk_durations = [1.0] * num_results # Use dummy durations for the function call
-                 else:
-                     chunk_durations = [] # Handle case with zero results
+                print(
+                    f"Warning: Mismatch between results ({len(all_results)}) and durations ({len(chunk_durations)}). Using equal weights for aggregation."
+                )
+                # Fallback to equal weights if durations are inconsistent
+                num_results = len(all_results)
+                if num_results > 0:
+                    chunk_durations = [1.0] * num_results  # Use dummy durations for the function call
+                else:
+                    chunk_durations = []  # Handle case with zero results
 
             # Use the aggregation function for weighted averaging
-            result = _aggregate_analysis_results(all_results, chunk_durations) # Aggregation uses adjusted data now
+            result = _aggregate_analysis_results(all_results, chunk_durations)  # Aggregation uses adjusted data now
             print("Results aggregated successfully.")
 
             # Map aggregated result to ContentAnalysis model
@@ -648,18 +653,18 @@ def analyze_content(state: EncodExState) -> EncodExState:
             selected_segments: List[Segment] = []
             for raw_seg in raw_segments:
                 try:
-                    timestamp_range = raw_seg.get("timestamp_range", "0.000 - 0.000") # Use adjusted range
+                    timestamp_range = raw_seg.get("timestamp_range", "0.000 - 0.000")  # Use adjusted range
                     # Parse the already absolute timestamps
                     start_str, end_str = timestamp_range.split(" - ")
-                    start_time = _parse_timestamp(start_str) # Should handle "SS.sss" format
+                    start_time = _parse_timestamp(start_str)  # Should handle "SS.sss" format
                     end_time = _parse_timestamp(end_str)
 
                     segment = Segment(
                         complexity=raw_seg.get("complexity", "Unknown"),
-                        timestamp_range=timestamp_range, # Store the absolute range string
+                        timestamp_range=timestamp_range,  # Store the absolute range string
                         description=raw_seg.get("description", ""),
-                        start_time=start_time, # Store absolute start time
-                        end_time=end_time,     # Store absolute end time
+                        start_time=start_time,  # Store absolute start time
+                        end_time=end_time,  # Store absolute end time
                     )
                     selected_segments.append(segment)
                 except Exception as seg_e:
