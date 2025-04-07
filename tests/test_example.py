@@ -2,7 +2,6 @@
 Placeholder test file to ensure pytest runs successfully in CI.
 """
 
-import pytest
 
 
 def test_always_passes():
