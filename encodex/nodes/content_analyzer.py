@@ -47,35 +47,49 @@ Use the following format:
   "assessment": {
     "motion_intensity": {
       "score": 75,
-      "justification": "The video contains numerous high-action sequences including fights, explosions, magical effects, and fast camera movements (establishing shots, chases). While there are some static logo screens and dialogue scenes, the overall motion level is high."
+      "justification": "The video contains numerous high-action sequences including fights, explosions, magical effects, \
+and fast camera movements (establishing shots, chases). While there are some static logo screens and dialogue scenes, \
+the overall motion level is high."
     },
     "temporal_complexity": {
       "score": 80,
-      "justification": "High temporal complexity due to frequent scene cuts, fast and often unpredictable motion (explosions, character powers, crowd movement), and significant use of particle effects and flashing lights (lightning, magic). Predicting subsequent frames is challenging."
+      "justification": "High temporal complexity due to frequent scene cuts, fast and often unpredictable motion \
+(explosions, character powers, crowd movement), and significant use of particle effects and flashing lights \
+(lightning, magic). Predicting subsequent frames is challenging."
     },
     "spatial_complexity": {
       "score": 85,
-      "justification": "Very high spatial complexity. Scenes feature intricate details like ancient carvings, complex costumes, detailed rock textures, large crowds, detailed cityscapes (both ancient and modern), and elaborate CGI environments. Many frames are packed with visual information."
+      "justification": "Very high spatial complexity. Scenes feature intricate details like ancient carvings, complex \
+costumes, detailed rock textures, large crowds, detailed cityscapes (both ancient and modern), and elaborate CGI \
+environments. Many frames are packed with visual information."
     },
     "scene_change_frequency": {
       "score": 85,
-      "justification": "The video exhibits very frequent scene changes, typical of trailers and action sequences. Cuts occur rapidly, especially during the opening studio/DC logo montages and the action/historical segments."
+      "justification": "The video exhibits very frequent scene changes, typical of trailers and action sequences. \
+Cuts occur rapidly, especially during the opening studio/DC logo montages and the action/historical segments."
     },
     "texture_detail_prevalence": {
       "score": 70,
-      "justification": "Significant texture detail is prevalent, including rock faces, ancient stonework/carvings, clothing fabrics, dust, skin detail, and environmental textures. While some CGI elements might be smoother, detailed textures are common."
+      "justification": "Significant texture detail is prevalent, including rock faces, ancient stonework/carvings, \
+clothing fabrics, dust, skin detail, and environmental textures. While some CGI elements might be smoother, \
+detailed textures are common."
     },
     "contrast_levels": {
       "score": 80,
-      "justification": "High contrast is present throughout. The video alternates between very dark scenes (logo sequences, cave interiors, night scenes) and scenes with extremely bright elements (sunlit landscapes, explosions, magical energy bursts)."
+      "justification": "High contrast is present throughout. The video alternates between very dark scenes (logo \
+sequences, cave interiors, night scenes) and scenes with extremely bright elements (sunlit landscapes, explosions, \
+magical energy bursts)."
     },
     "animation_type": {
       "type": "Live Action / CGI Hybrid",
-      "justification": "The video consists primarily of live-action footage heavily integrated with extensive computer-generated imagery (CGI) for visual effects, character abilities, environments, and large-scale destruction."
+      "justification": "The video consists primarily of live-action footage heavily integrated with extensive \
+computer-generated imagery (CGI) for visual effects, character abilities, environments, and large-scale destruction."
     },
     "grain_noise_levels": {
       "score": 40,
-      "justification": "Moderate grain/noise. Some sequences, particularly the historical/ancient mining scenes (e.g., 1:45-2:30), appear to have intentional grain or stylization applied. Darker scenes may exhibit some minor digital noise, but it's not overly dominant across the entire sample."
+      "justification": "Moderate grain/noise. Some sequences, particularly the historical/ancient mining scenes \
+(e.g., 1:45-2:30), appear to have intentional grain or stylization applied. Darker scenes may exhibit some minor \
+digital noise, but it's not overly dominant across the entire sample."
     }
   },
   "representative_segments": [
@@ -87,22 +101,26 @@ Use the following format:
     {
       "complexity": "Medium",
       "timestamp_range": "10:53 - 11:08",
-      "description": "Dialogue scene outside the van in the desert. Moderate character motion, clear textures on characters and van, relatively stable background, bright daylight."
+      "description": "Dialogue scene outside the van in the desert. Moderate character motion, clear textures on \
+characters and van, relatively stable background, bright daylight."
     },
     {
       "complexity": "High",
       "timestamp_range": "1:45 - 1:59",
-      "description": "Ancient mining scene. High spatial detail (rock textures, numerous people), significant motion (crowds mining), desaturated look potentially adding noise/grain complexity."
+      "description": "Ancient mining scene. High spatial detail (rock textures, numerous people), significant motion \
+(crowds mining), desaturated look potentially adding noise/grain complexity."
     },
     {
       "complexity": "High",
       "timestamp_range": "5:39 - 5:54",
-      "description": "King puts on the crown, triggering a massive magical explosion. High motion, intense particle effects, high contrast, rapid destruction, challenging for motion estimation."
+      "description": "King puts on the crown, triggering a massive magical explosion. High motion, intense particle \
+effects, high contrast, rapid destruction, challenging for motion estimation."
     },
     {
       "complexity": "High",
       "timestamp_range": "17:21 - 17:40",
-      "description": "Black Adam emerges and attacks soldiers in the dark cave. Very fast action, significant magical/electrical CGI effects, low light conditions with high contrast highlights, multiple moving figures."
+      "description": "Black Adam emerges and attacks soldiers in the dark cave. Very fast action, significant \
+magical/electrical CGI effects, low light conditions with high contrast highlights, multiple moving figures."
     }
   ]
 }
