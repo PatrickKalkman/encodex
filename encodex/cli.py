@@ -30,8 +30,14 @@ def run_single_node(args):
         if input_state_path:
             input_state = load_state_from_json(input_state_path)
 
-        # Run the node
-        updated_state = run_node(node_name, input_state, input_file)
+        # Prepare node-specific arguments from CLI flags
+        node_kwargs = {}
+        if hasattr(args, 'use_gpu') and args.use_gpu: # Check if arg exists and is True
+            node_kwargs['use_gpu'] = True
+            # print("CLI flag --use-gpu detected.") # Optional: Add confirmation
+
+        # Run the node, passing potential node-specific arguments
+        updated_state = run_node(node_name, input_state, input_file, **node_kwargs)
 
         # Print error if present
         if updated_state.error:
@@ -88,27 +94,35 @@ def run_full_workflow(args):
 
         # Create and run the workflow
         workflow = create_graph()
-        final_state = workflow.invoke({"state": initial_state})
+        # LangGraph typically returns the final state dictionary
+        final_state_dict = workflow.invoke({"state": initial_state})
 
-        # Check for errors
-        if final_state.error:
-            print(f"Error: {final_state.error}", file=sys.stderr)
+        # Extract the actual state object, assuming it's under the 'state' key
+        final_state_obj = final_state_dict.get("state") if isinstance(final_state_dict, dict) else None
+
+        # Check for errors in the final state
+        if not final_state_obj or not isinstance(final_state_obj, EncodExState):
+             print(f"Workflow did not return a valid EncodExState object. Output: {final_state_dict}", file=sys.stderr)
+             sys.exit(1)
+
+        if final_state_obj.error:
+            print(f"Workflow Error: {final_state_obj.error}", file=sys.stderr)
             sys.exit(1)
 
         # Save output if requested
         if output_path:
-            save_state_to_json(final_state, output_path)
+            save_state_to_json(final_state_obj, output_path)
             print(f"Saved output to {output_path}")
 
         # Print summary
         print("\nWorkflow completed successfully.")
-        if final_state.encoding_ladder:
+        if final_state_obj.encoding_ladder:
             print("\nRecommended Encoding Ladder:")
-            for level in final_state.encoding_ladder:
+            for level in final_state_obj.encoding_ladder:
                 print(f"  {level.resolution}: {level.bitrate} ({level.profile})")
 
-        if final_state.estimated_savings:
-            print(f"\nEstimated savings: {final_state.estimated_savings}")
+        if final_state_obj.estimated_savings:
+            print(f"\nEstimated savings: {final_state_obj.estimated_savings}")
 
     except Exception as e:
         print(f"Error running workflow: {str(e)}", file=sys.stderr)
@@ -275,7 +289,8 @@ def main():
     )
 
     # Create subparsers for different commands
-    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+    # Make command required
+    subparsers = parser.add_subparsers(dest="command", help="Command to run", required=True)
 
     # Node runner command
     node_parser = subparsers.add_parser("node", help="Run a single node")
@@ -283,6 +298,12 @@ def main():
     node_parser.add_argument("--input", "-i", help="Path to input video file")
     node_parser.add_argument("--state", "-s", help="Path to input state JSON file")
     node_parser.add_argument("--output", "-o", help="Path to output state JSON file")
+    # Add the --use-gpu flag here
+    node_parser.add_argument(
+        "--use-gpu",
+        action="store_true", # Makes it a boolean flag
+        help="Attempt to use GPU for encoding (if applicable to the node, e.g., low_res_encoder)"
+    )
 
     # Workflow runner command
     workflow_parser = subparsers.add_parser("workflow", help="Run the complete workflow")
@@ -293,8 +314,8 @@ def main():
     legacy_parser = subparsers.add_parser("analyze", help="Analyze video with Gemini API directly")
     legacy_parser.add_argument("input", help="Path to video file or Gemini file URI")
 
-    # list_parser = subparsers.add_parser("list-files", help="List files uploaded to Gemini API")
-    # delete_parser = subparsers.add_parser("delete-files", help="Delete all files uploaded to Gemini API")
+    list_parser = subparsers.add_parser("list-files", help="List files uploaded to Gemini API (Legacy)")
+    delete_parser = subparsers.add_parser("delete-files", help="Delete all files uploaded to Gemini API (Legacy)")
 
     # Parse arguments
     args = parser.parse_args()
@@ -302,7 +323,8 @@ def main():
     # Execute appropriate command
     if args.command == "node":
         if not args.input and not args.state:
-            node_parser.error("Either --input or --state must be provided")
+            # Use parser.error for consistency, it exits automatically
+            node_parser.error("Either --input or --state must be provided for the 'node' command")
         run_single_node(args)
 
     elif args.command == "workflow":
@@ -317,8 +339,7 @@ def main():
     elif args.command == "delete-files":
         delete_all_files()
 
-    else:
-        parser.print_help()
+    # No 'else' needed because subparsers are required
 
 
 if __name__ == "__main__":
