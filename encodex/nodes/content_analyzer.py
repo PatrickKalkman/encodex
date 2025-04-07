@@ -11,7 +11,6 @@ from typing import Any, Dict
 from google import genai
 
 from encodex.graph_state import AnimationType, ContentAnalysis, ContentCharacteristic, EncodExState
-from encodex.nodes.low_res_encoder import split_video_for_gemini
 
 # Regex to check if the input looks like a Gemini File API URI (e.g., "files/...")
 GEMINI_FILE_URI_PATTERN = r"^files\/[a-zA-Z0-9_-]+$"
@@ -139,29 +138,26 @@ def analyze_content(state: EncodExState) -> EncodExState:
     Analyze video content using Google Gemini API.
 
     Args:
-        state: Current graph state with low_res_path
+        state: Current graph state with chunk_paths from video_splitter
 
     Returns:
         Updated state with content_analysis
     """
     # Validate input
-    if not state.low_res_path:
-        state.error = "Missing low-resolution video path"
+    if not state.chunk_paths:
+        state.error = "Missing video chunk paths"
         return state
-
-    low_res_path = state.low_res_path
 
     try:
         # Initialize Gemini client
         client = _initialize_genai_client()
 
-        # Split video if necessary
-        video_chunks = split_video_for_gemini(low_res_path)
-
         # Process each chunk
         all_results = []
 
-        for chunk_path in video_chunks:
+        for chunk_path in state.chunk_paths:
+            print(f"Processing video chunk: {chunk_path}")
+
             # Upload to Gemini
             video_file = _upload_video_to_gemini(client, chunk_path)
 

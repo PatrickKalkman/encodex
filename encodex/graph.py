@@ -16,6 +16,7 @@ from encodex.nodes.placeholder_nodes import (
     generate_test_encodings,
 )
 from encodex.nodes.segment_selector import select_segments
+from encodex.nodes.video_splitter import split_video
 
 
 def create_graph():
@@ -26,6 +27,7 @@ def create_graph():
     # Add all nodes to the graph
     workflow.add_node("input_processor", process_input)
     workflow.add_node("low_res_encoder", create_low_res_preview)
+    workflow.add_node("video_splitter", split_video)
     workflow.add_node("content_analyzer", analyze_content)
     workflow.add_node("segment_selector", select_segments)
     workflow.add_node("test_encoding_generator", generate_test_encodings)
@@ -36,7 +38,8 @@ def create_graph():
 
     # Connect the nodes in a linear flow
     workflow.add_edge("input_processor", "low_res_encoder")
-    workflow.add_edge("low_res_encoder", "content_analyzer")
+    workflow.add_edge("low_res_encoder", "video_splitter")
+    workflow.add_edge("video_splitter", "content_analyzer")
     workflow.add_edge("content_analyzer", "segment_selector")
     workflow.add_edge("segment_selector", "test_encoding_generator")
     workflow.add_edge("test_encoding_generator", "quality_metrics_calculator")
@@ -56,6 +59,7 @@ def get_node_function(node_name: str):
     node_map = {
         "input_processor": process_input,
         "low_res_encoder": create_low_res_preview,
+        "video_splitter": split_video,
         "content_analyzer": analyze_content,
         "segment_selector": select_segments,
         "test_encoding_generator": generate_test_encodings,

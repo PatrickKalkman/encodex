@@ -97,6 +97,7 @@ class EncodExState(BaseModel):
     input_file: str
     video_metadata: Optional[VideoMetadata] = None
     low_res_path: Optional[str] = None
+    chunk_paths: Optional[List[str]] = None
     content_analysis: Optional[ContentAnalysis] = None
     selected_segments: Optional[List[Segment]] = None
     test_encodings: Optional[List[TestEncoding]] = None
