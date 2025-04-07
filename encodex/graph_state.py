@@ -3,7 +3,7 @@ State management for the EncodEx LangGraph.
 """
 
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
