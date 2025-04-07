@@ -7,7 +7,9 @@ encoding parameters to evaluate quality vs. bitrate tradeoffs.
 
 import logging
 import os
+import re  # Add re import for parsing progress
 import subprocess
+import sys  # Add sys import for stdout flushing
 from typing import List, Optional
 
 from encodex.graph_state import EncodExState, TestEncoding
@@ -15,26 +17,63 @@ from encodex.graph_state import EncodExState, TestEncoding
 logger = logging.getLogger(__name__)
 
 
-def _run_ffmpeg_command(cmd: List[str]) -> Optional[str]:
+def _run_ffmpeg_command(cmd: List[str], duration_s: float) -> Optional[str]:
     """
-    Run an FFmpeg command and return error message if failed.
+    Run an FFmpeg command, print progress, and return error message if failed.
 
     Args:
-        cmd: FFmpeg command as a list of strings
+        cmd: FFmpeg command as a list of strings. Must include '-progress pipe:1'.
+        duration_s: Duration of the input segment in seconds for progress calculation.
 
     Returns:
-        Error message if command failed, None otherwise
+        Error message if command failed, None otherwise.
     """
-    try:
-        # Run the command. check=True raises CalledProcessError on non-zero exit.
-        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        # If successful, return None (indicating no error)
-        return None
-    except subprocess.CalledProcessError as e:
-        # If failed, return the error message from stderr
-        error_message = f"FFmpeg error (Exit Code {e.returncode}): {e.stderr.strip()}"
+    logger.info(f"Executing FFmpeg command: {' '.join(cmd)}")
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,  # Capture progress from stdout
+        stderr=subprocess.PIPE,  # Capture errors from stderr
+        text=True,  # Decode output as text
+        encoding="utf-8",  # Specify encoding
+        bufsize=1,  # Line buffered
+    )
+
+    total_duration_us = duration_s * 1000000 if duration_s > 0 else None
+    last_progress_line = ""
+
+    # Read progress from stdout
+    while True:
+        if process.stdout is None:
+            break
+        line = process.stdout.readline()
+        if not line:
+            break
+
+        # Simple parsing for 'out_time_us' (microseconds)
+        match = re.search(r"out_time_us=(\d+)", line)
+        if match and total_duration_us:
+            current_us = int(match.group(1))
+            progress = (current_us / total_duration_us) * 100
+            # Print progress on the same line
+            progress_line = f"\rProgress: {progress:.1f}%"
+            print(progress_line, end="")
+            last_progress_line = progress_line # Store last line to overwrite later
+            sys.stdout.flush()  # Ensure it prints immediately
+        elif line.strip().startswith("progress="): # Handle end of progress stream
+             # Clear the progress line completely
+            print("\r" + " " * len(last_progress_line) + "\r", end="")
+            sys.stdout.flush()
+
+
+    # Wait for the process to finish and capture remaining output/errors
+    stdout, stderr = process.communicate()
+
+    if process.returncode != 0:
+        error_message = f"FFmpeg error (Exit Code {process.returncode}): {stderr.strip()}"
         logger.debug(error_message) # Log the detailed error at debug level
-        return error_message # Return the error string
+        return error_message
+    else:
+        return None # Success
 
 
 def _create_test_encoding(
@@ -71,9 +110,13 @@ def _create_test_encoding(
     maxrate = int(bitrate * 1.5)
     bufsize = bitrate * 2
 
+    # Calculate segment duration for progress
+    segment_duration = segment["end_time"] - segment["start_time"]
+
     # Build FFmpeg command
     cmd = [
         "ffmpeg",
+        "-progress", "pipe:1", # Add progress reporting to stdout
         "-i",
         input_file,
         "-ss",
@@ -96,12 +139,13 @@ def _create_test_encoding(
         "-y",  # Overwrite existing files
         output_path,
     ]
-    # Log the command at INFO level for visibility
-    logger.info(f"Executing FFmpeg command: {' '.join(cmd)}")
 
-    # Run FFmpeg command
-    error_message = _run_ffmpeg_command(cmd)
+    # Run FFmpeg command and capture potential error
+    error_message = _run_ffmpeg_command(cmd, segment_duration)
+
     if error_message:  # Check if an error message string was returned
+        # Ensure the progress line is cleared on error
+        print("\r" + " " * 50 + "\r", end="") # Clear potential leftover progress line
         logger.error(
             f"Failed to create test encoding for segment {segment_id} "
             f"({resolution} {bitrate}k): {error_message}"
