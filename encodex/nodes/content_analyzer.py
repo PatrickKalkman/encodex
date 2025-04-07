@@ -143,14 +143,17 @@ def analyze_content(state: EncodExState) -> EncodExState:
     Returns:
         Updated state with content_analysis
     """
+    print("Starting content analysis node...")
     # Validate input
     if not state.chunk_paths:
+        print("Error: Missing video chunk paths in state.")
         state.error = "Missing video chunk paths"
         return state
 
     try:
-        # Initialize Gemini client
+        print("Initializing Gemini client...")
         client = _initialize_genai_client()
+        print("Gemini client initialized.")
 
         # Select chunks for analysis: first, middle, last
         num_chunks = len(state.chunk_paths)
@@ -168,36 +171,59 @@ def analyze_content(state: EncodExState) -> EncodExState:
         # Process selected chunks
         all_results = []
         for chunk_path in chunks_to_analyze:
-            print(f"Processing video chunk: {chunk_path}")
+            print(f"--- Processing video chunk: {chunk_path} ---")
 
             # Upload to Gemini
+            print(f"Uploading chunk {chunk_path} to Gemini...")
             video_file = _upload_video_to_gemini(client, chunk_path)
+            print(f"Chunk uploaded successfully. File URI: {video_file.uri}")
 
             # Analyze with Gemini
+            print(f"Requesting analysis from Gemini for {video_file.uri}...")
             analysis_text = _analyze_with_gemini(client, video_file)
+            print("Received analysis response from Gemini.")
+            # print(f"Raw analysis text:\n{analysis_text}") # Optional: Log raw response
 
             # Parse the response
+            print("Parsing analysis response...")
             analysis_data = _parse_analysis_result(analysis_text)
+            print("Analysis response parsed successfully.")
+            # print(f"Parsed analysis data: {analysis_data}") # Optional: Log parsed data
             all_results.append(analysis_data)
 
             # Optionally delete the file from Gemini
+            # Optionally delete the file from Gemini
+            # print(f"Deleting file {video_file.name} from Gemini...")
             # client.files.delete(name=video_file.name)
+            # print("File deleted.")
+            print(f"--- Finished processing chunk: {chunk_path} ---")
 
         # Combine results (using first result for now, will be enhanced later)
+        print("Combining analysis results...")
         if all_results:
+            # TODO: Implement a more sophisticated result combination strategy
+            print("Using analysis result from the first chunk.")
             result = all_results[0]
 
             # Map to ContentAnalysis model
+            print("Mapping raw analysis data to ContentAnalysis model...")
             content_analysis = _map_to_content_analysis(result)
+            print("Mapping successful.")
 
             # Update state
+            print("Updating state with content analysis...")
             state.content_analysis = content_analysis
+            print("State updated.")
 
         else:
+            print("Error: No analysis results were obtained from Gemini.")
             state.error = "No analysis results returned from Gemini"
 
+        print("Content analysis node finished successfully.")
         return state
 
     except Exception as e:
+        print(f"Error during content analysis: {str(e)}")
         state.error = f"Error analyzing content: {str(e)}"
+        print("Content analysis node finished with error.")
         return state
