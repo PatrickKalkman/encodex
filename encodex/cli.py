@@ -1,150 +1,128 @@
+"""
+Command-line interface for the EncodEx system.
+"""
+
 import argparse
 import os
-
-# Import requests exceptions if you suspect lower-level HTTP issues
-# import requests.exceptions
-import re  # Add import for regex
 import sys
 import time
 
-from google import genai
-
-ANALYSIS_PROMPT = """
-Analyze this video sample and provide a structured assessment of the following
-content characteristics that impact video compression efficiency. For each
-numerical characteristic, provide a score from 0-100 and a brief justification:
-
-1. Motion intensity: [Score] - [Justification]
-2. Temporal complexity: [Score] - [Justification]
-3. Spatial complexity: [Score] - [Justification]
-4. Scene change frequency: [Score] - [Justification]
-5. Texture detail prevalence: [Score] - [Justification]
-6. Contrast levels: [Score] - [Justification]
-7. Animation type: [Type] - [Justification]
-8. Grain/noise levels: [Score] - [Justification]
-
-Also identify 3-5 representative segments (with timestamp ranges) that would be
-useful for encoding tests, including high-complexity, medium-complexity, and
-low-complexity sections.
-
-Provide the output in JSON format.
-"""
-
-# Regex to check if the input looks like a Gemini File API URI (e.g., "files/...")
-GEMINI_FILE_URI_PATTERN = r"^files\/[a-zA-Z0-9_-]+$"
+from encodex.graph import create_graph
+from encodex.graph_state import EncodExState
+from encodex.node_runner import load_state_from_json, run_node, save_state_to_json
 
 
-def analyze_video(input_source: str) -> None:
+def run_single_node(args):
     """
-    Analyzes a video using the Google Generative AI API, accepting either a
-    local file path or a Gemini File API URI (e.g., "files/xyz123").
+    Run a single node of the EncodEx workflow.
 
     Args:
-        input_source: The path to the local video file or the URI of a
-                      previously uploaded file.
+        args: Command line arguments
     """
-    client = _initialize_genai_client()
-    video_file = None
+    node_name = args.node
+    input_file = args.input
+    input_state_path = args.state
+    output_path = args.output
 
     try:
-        # Check if input_source is a URI or a local path
-        if re.match(GEMINI_FILE_URI_PATTERN, input_source):
-            print(f"Using existing file URI: {input_source}")
-            try:
-                video_file = client.files.get(name=input_source)
-                print(f"Found file: {video_file.name} (State: {video_file.state.name})")
-                # No need to wait for processing if it's already ACTIVE
-                if video_file.state.name == "PROCESSING":
-                    print("File is still processing, please wait and try again later or wait here.")
-                    # Optional: Add waiting loop here if desired, similar to upload
-                    while video_file.state.name == "PROCESSING":
-                        time.sleep(5)
-                        video_file = client.files.get(name=video_file.name)
-                        print(f"File state: {video_file.state.name}")
+        # Load input state if provided
+        input_state = None
+        if input_state_path:
+            input_state = load_state_from_json(input_state_path)
 
-            except Exception as e:  # Catch specific errors? e.g. NotFound
-                print(f"Error retrieving file URI {input_source}: {e}", file=sys.stderr)
-                sys.exit(1)
+        # Run the node
+        updated_state = run_node(node_name, input_state, input_file)
 
-        elif os.path.exists(input_source):
-            print(f"Uploading local file: {input_source}...")
-            # TODO: Add more specific error handling for file upload
-            video_file = client.files.upload(file=input_source)
-            print(f"Uploaded file: {video_file.name} (State: {video_file.state.name})")
-
-            # Wait for the video to be processed.
-            while video_file.state.name == "PROCESSING":
-                print("Processing video...")
-                time.sleep(5)
-                video_file = client.files.get(name=video_file.name)
-                print(f"File state: {video_file.state.name}")
-        else:
-            print(f"Error: Input source not found or invalid: {input_source}", file=sys.stderr)
-            print(
-                "Please provide a valid local file path or a Gemini File API URI (e.g., 'files/xyz123').",
-                file=sys.stderr,
-            )
+        # Print error if present
+        if updated_state.error:
+            print(f"Error: {updated_state.error}", file=sys.stderr)
             sys.exit(1)
 
-        # Check final state after upload/retrieval
-        if video_file.state.name != "ACTIVE":
-            print(f"Error: Video file is not active. Final state: {video_file.state.name}", file=sys.stderr)
-            if video_file.state.name == "FAILED" and hasattr(video_file, "error") and video_file.error:
-                print(f"Reason: {video_file.error.message}", file=sys.stderr)
-            # Optionally delete the failed upload/file?
-            # client.files.delete(name=video_file.name)
-            sys.exit(1)
+        # Save output state if requested
+        if output_path:
+            save_state_to_json(updated_state, output_path)
+            print(f"Saved state to {output_path}")
 
-        print("Video file is active and ready for analysis.")
-        # --- Content Generation ---
-        # model = "gemini-1.5-pro-latest"  # Using a more stable model as default
-        model = "gemini-2.5-pro-preview-03-25" # Keep if you specifically need this preview
-        print(f"Generating analysis using model: {model}...")
+        # Print summary of updated state
+        print("\nNode execution completed successfully.")
+        print(f"Node: {node_name}")
 
-        try:
-            response = client.models.generate_content(
-                model=model,
-                contents=[
-                    video_file,  # Reference to the active video file object
-                    ANALYSIS_PROMPT,
-                ],
-            )
-            print("\nAnalysis Result:")
-            print(response.text)
+        if node_name == "input_processor" and updated_state.video_metadata:
+            meta = updated_state.video_metadata
+            print("\nVideo Metadata:")
+            print(f"  Duration: {meta.duration:.2f} seconds")
+            print(f"  Resolution: {meta.width}x{meta.height}")
+            print(f"  FPS: {meta.fps}")
+            print(f"  Codec: {meta.codec}")
+            print(f"  Bitrate: {meta.bitrate} bps")
 
-            # Optional: Delete the file only if it was uploaded in this run?
-            # if not re.match(GEMINI_FILE_URI_PATTERN, input_source):
-            #     print(f"\nDeleting uploaded file: {video_file.name}")
-            #     client.files.delete(name=video_file.name)
+        elif node_name == "low_res_encoder" and updated_state.low_res_path:
+            print(f"\nLow-res preview created: {updated_state.low_res_path}")
 
-        except Exception as gen_e:
-            print(f"\nError during content generation: {gen_e}", file=sys.stderr)
-            # Suggest reusing the file if generation failed but file is active
-            if video_file and video_file.state.name == "ACTIVE":
-                print(f"\nThe video file '{video_file.name}' is processed and active.", file=sys.stderr)
-                print("You can try analyzing it again later using its URI:", file=sys.stderr)
-                print(f"  python -m encodex.cli {video_file.name}", file=sys.stderr)
-            sys.exit(1)
+        elif node_name == "content_analyzer" and updated_state.content_analysis:
+            analysis = updated_state.content_analysis
+            print("\nContent Analysis:")
+            print(f"  Motion Intensity: {analysis.motion_intensity.score:.1f}")
+            print(f"  Temporal Complexity: {analysis.temporal_complexity.score:.1f}")
+            print(f"  Spatial Complexity: {analysis.spatial_complexity.score:.1f}")
+            print(f"  Animation Type: {analysis.animation_type.type}")
 
     except Exception as e:
-        # Catch-all for other potential errors (e.g., client init)
-        print(f"An unexpected error occurred: {e}", file=sys.stderr)
+        print(f"Error running node {node_name}: {str(e)}", file=sys.stderr)
         sys.exit(1)
 
 
-def _initialize_genai_client() -> genai.Client:
-    """Initializes and returns the Google Generative AI client."""
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("Error: GEMINI_API_KEY environment variable not set.", file=sys.stderr)
+def run_full_workflow(args):
+    """
+    Run the complete EncodEx workflow.
+
+    Args:
+        args: Command line arguments
+    """
+    input_file = args.input
+    output_path = args.output
+
+    try:
+        # Create initial state
+        initial_state = EncodExState(input_file=input_file)
+
+        # Create and run the workflow
+        workflow = create_graph()
+        final_state = workflow.invoke({"state": initial_state})
+
+        # Check for errors
+        if final_state.error:
+            print(f"Error: {final_state.error}", file=sys.stderr)
+            sys.exit(1)
+
+        # Save output if requested
+        if output_path:
+            save_state_to_json(final_state, output_path)
+            print(f"Saved output to {output_path}")
+
+        # Print summary
+        print("\nWorkflow completed successfully.")
+        if final_state.encoding_ladder:
+            print("\nRecommended Encoding Ladder:")
+            for level in final_state.encoding_ladder:
+                print(f"  {level.resolution}: {level.bitrate} ({level.profile})")
+
+        if final_state.estimated_savings:
+            print(f"\nEstimated savings: {final_state.estimated_savings}")
+
+    except Exception as e:
+        print(f"Error running workflow: {str(e)}", file=sys.stderr)
         sys.exit(1)
 
-    # http_options = HttpOptions(timeout=180.0) # Removed as per user feedback
-    return genai.Client(api_key=api_key)
 
+def list_uploaded_files():
+    """
+    List files uploaded to Gemini API.
+    This function is kept for backward compatibility with the original CLI.
+    """
+    # Import here to avoid circular imports
+    from encodex.nodes.content_analyzer import _initialize_genai_client
 
-def list_uploaded_files() -> None:
-    """Lists files previously uploaded via the File API."""
     try:
         client = _initialize_genai_client()
         print("Listing uploaded files:")
@@ -163,8 +141,14 @@ def list_uploaded_files() -> None:
         sys.exit(1)
 
 
-def delete_all_files() -> None:
-    """Deletes all files previously uploaded via the File API."""
+def delete_all_files():
+    """
+    Delete all files uploaded to Gemini API.
+    This function is kept for backward compatibility with the original CLI.
+    """
+    # Import here to avoid circular imports
+    from encodex.nodes.content_analyzer import _initialize_genai_client
+
     try:
         client = _initialize_genai_client()
         print("Attempting to delete all uploaded files...")
@@ -194,56 +178,147 @@ def delete_all_files() -> None:
         sys.exit(1)
 
 
-def main() -> None:
+def analyze_video_directly(input_source):
+    """
+    Direct video analysis using Gemini API - kept for backward compatibility.
+
+    Args:
+        input_source: Path to video file or Gemini file URI
+    """
+    # Import here to avoid circular imports
+    import re
+
+    from encodex.nodes.content_analyzer import ANALYSIS_PROMPT, GEMINI_FILE_URI_PATTERN, _initialize_genai_client
+
+    client = _initialize_genai_client()
+    video_file = None
+
+    try:
+        # Check if input_source is a URI or a local path
+        if re.match(GEMINI_FILE_URI_PATTERN, input_source):
+            print(f"Using existing file URI: {input_source}")
+            try:
+                video_file = client.files.get(name=input_source)
+                print(f"Found file: {video_file.name} (State: {video_file.state.name})")
+                # No need to wait for processing if it's already ACTIVE
+                if video_file.state.name == "PROCESSING":
+                    print("File is still processing, please wait and try again later or wait here.")
+                    # Optional: Add waiting loop here if desired, similar to upload
+                    while video_file.state.name == "PROCESSING":
+                        time.sleep(5)
+                        video_file = client.files.get(name=video_file.name)
+                        print(f"File state: {video_file.state.name}")
+
+            except Exception as e:
+                print(f"Error retrieving file URI {input_source}: {e}", file=sys.stderr)
+                sys.exit(1)
+
+        elif os.path.exists(input_source):
+            print(f"Uploading local file: {input_source}...")
+            video_file = client.files.upload(file=input_source)
+            print(f"Uploaded file: {video_file.name} (State: {video_file.state.name})")
+
+            # Wait for the video to be processed.
+            while video_file.state.name == "PROCESSING":
+                print("Processing video...")
+                time.sleep(5)
+                video_file = client.files.get(name=video_file.name)
+                print(f"File state: {video_file.state.name}")
+        else:
+            print(f"Error: Input source not found or invalid: {input_source}", file=sys.stderr)
+            print(
+                "Please provide a valid local file path or a Gemini File API URI (e.g., 'files/xyz123').",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        # Check final state after upload/retrieval
+        if video_file.state.name != "ACTIVE":
+            print(f"Error: Video file is not active. Final state: {video_file.state.name}", file=sys.stderr)
+            if hasattr(video_file, "error") and video_file.error:
+                print(f"Reason: {video_file.error.message}", file=sys.stderr)
+            sys.exit(1)
+
+        print("Video file is active and ready for analysis.")
+        model = "gemini-2.5-pro-preview-03-25"  # Same as in content_analyzer.py
+        print(f"Generating analysis using model: {model}...")
+
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=[
+                    video_file,  # Reference to the active video file object
+                    ANALYSIS_PROMPT,
+                ],
+            )
+            print("\nAnalysis Result:")
+            print(response.text)
+
+        except Exception as gen_e:
+            print(f"\nError during content generation: {gen_e}", file=sys.stderr)
+            if video_file and video_file.state.name == "ACTIVE":
+                print(f"\nThe video file '{video_file.name}' is processed and active.", file=sys.stderr)
+                print("You can try analyzing it again later using its URI:", file=sys.stderr)
+                print(f"  python -m encodex.cli {video_file.name}", file=sys.stderr)
+            sys.exit(1)
+
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def main():
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
-        description="Analyze video content using Generative AI, list, or delete uploaded files.",
-        formatter_class=argparse.RawTextHelpFormatter,  # Keep formatting in help
+        description="EncodEx - AI-Driven Video Encoding Optimization System",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
-        "input_source",
-        nargs="?",
-        default=None,
-        help="Path to the local video file to analyze OR\n"
-        "the URI of a previously uploaded file (e.g., 'files/xyz123').\n"
-        "Required unless using --list-files or --delete-all-files.",
-    )
-    parser.add_argument(
-        "--list-files",
-        action="store_true",
-        help="List all files previously uploaded via the File API.",
-    )
-    parser.add_argument(
-        "--delete-all-files",
-        action="store_true",
-        help="Delete all files previously uploaded via the File API.",
-    )
+
+    # Create subparsers for different commands
+    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+
+    # Node runner command
+    node_parser = subparsers.add_parser("node", help="Run a single node")
+    node_parser.add_argument("node", help="Name of the node to run")
+    node_parser.add_argument("--input", "-i", help="Path to input video file")
+    node_parser.add_argument("--state", "-s", help="Path to input state JSON file")
+    node_parser.add_argument("--output", "-o", help="Path to output state JSON file")
+
+    # Workflow runner command
+    workflow_parser = subparsers.add_parser("workflow", help="Run the complete workflow")
+    workflow_parser.add_argument("--input", "-i", required=True, help="Path to input video file")
+    workflow_parser.add_argument("--output", "-o", help="Path to output JSON file")
+
+    # Legacy commands for backward compatibility
+    legacy_parser = subparsers.add_parser("analyze", help="Analyze video with Gemini API directly")
+    legacy_parser.add_argument("input", help="Path to video file or Gemini file URI")
+
+    # list_parser = subparsers.add_parser("list-files", help="List files uploaded to Gemini API")
+    # delete_parser = subparsers.add_parser("delete-files", help="Delete all files uploaded to Gemini API")
+
+    # Parse arguments
     args = parser.parse_args()
 
-    # Ensure mutual exclusivity
-    action_count = sum([args.list_files, args.delete_all_files, bool(args.input_source)])
-    if action_count > 1:
-        parser.print_help()
-        print(
-            "\nError: Only one action (analyze video/URI, --list-files, or --delete-all-files) can be specified at a time.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    elif action_count == 0:
-        parser.print_help()
-        print(
-            "\nError: You must specify an action (input_source, --list-files, or --delete-all-files).", file=sys.stderr
-        )
-        sys.exit(1)
+    # Execute appropriate command
+    if args.command == "node":
+        if not args.input and not args.state:
+            node_parser.error("Either --input or --state must be provided")
+        run_single_node(args)
 
-    if args.list_files:
+    elif args.command == "workflow":
+        run_full_workflow(args)
+
+    elif args.command == "analyze":
+        analyze_video_directly(args.input)
+
+    elif args.command == "list-files":
         list_uploaded_files()
-    elif args.delete_all_files:
-        # TODO: Add a confirmation step before deleting?
+
+    elif args.command == "delete-files":
         delete_all_files()
-    elif args.input_source:
-        analyze_video(args.input_source)
-    # The 'else' case for no action is handled by the check above
+
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":

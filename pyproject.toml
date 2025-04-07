@@ -11,6 +11,9 @@ requires-python = ">=3.11"
 dependencies = [
     "google-api-core>=2.24.2",
     "google-genai>=1.9.0",
+    "langgraph>=0.3.25",
+    "pydantic>=2.11.2",
+    "ffmpeg-python>=0.2.0",    
 ]
 
 [project.scripts]
