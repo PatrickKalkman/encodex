@@ -5,9 +5,9 @@ Low-resolution encoder node for creating a preview version of the video for anal
 import json
 import os
 import platform
-import re # Add re import for parsing progress
+import re  # Add re import for parsing progress
 import subprocess
-import sys # Add sys import for stdout flushing
+import sys  # Add sys import for stdout flushing
 
 from encodex.graph_state import EncodExState
 
