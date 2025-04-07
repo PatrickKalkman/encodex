@@ -146,7 +146,10 @@ def _create_test_encoding( # noqa: PLR0913 Too many arguments
         ]
     else:
         if use_gpu and platform.system() != "Darwin":
-            logger.warning("GPU acceleration requested, but only macOS VideoToolbox is currently supported. Falling back to CPU.")
+            logger.warning(
+                "GPU acceleration requested, but only macOS VideoToolbox is currently supported. "
+                "Falling back to CPU."
+            )
         logger.info("Using CPU encoder (libx264)...")
         encoder_cmd = [
             "-c:v", "libx264",
