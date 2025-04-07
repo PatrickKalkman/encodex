@@ -2,10 +2,10 @@
 Utility to run individual LangGraph nodes for testing.
 """
 
+import inspect  # Import inspect module
 import json
 import os
-import inspect # Import inspect module
-from typing import Optional, Any, Dict
+from typing import Any, Dict, Optional
 
 from encodex.graph import get_node_function
 from encodex.graph_state import EncodExState
