@@ -4,9 +4,8 @@ Low-resolution encoder node for creating a preview version of the video for anal
 
 import json
 import os
-import subprocess
-
 import platform
+import subprocess
 
 from encodex.graph_state import EncodExState
 
