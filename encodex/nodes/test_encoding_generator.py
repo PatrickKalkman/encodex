@@ -96,7 +96,8 @@ def _create_test_encoding(
         "-y",  # Overwrite existing files
         output_path,
     ]
-    logger.debug(f"Running FFmpeg command: {' '.join(cmd)}")
+    # Log the command at INFO level for visibility
+    logger.info(f"Executing FFmpeg command: {' '.join(cmd)}")
 
     # Run FFmpeg command
     error_message = _run_ffmpeg_command(cmd)
