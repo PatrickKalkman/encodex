@@ -303,7 +303,9 @@ def analyze_content(state: EncodExState) -> EncodExState:
             print("Parsing analysis response...")
             analysis_data = _parse_analysis_result(analysis_text)
             print("Analysis response parsed successfully.")
-            # print(f"Parsed analysis data: {analysis_data}") # Optional: Log parsed data
+            print("--- Parsed Gemini Analysis Data ---")
+            print(json.dumps(analysis_data, indent=2)) # Log the parsed data
+            print("-----------------------------------")
             all_results.append(analysis_data)
 
             # Optionally delete the file from Gemini
