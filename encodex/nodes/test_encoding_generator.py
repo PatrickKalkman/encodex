@@ -39,7 +39,7 @@ def _run_ffmpeg_command(cmd: List[str], duration_s: float) -> Optional[str]:
     )
 
     total_duration_us = duration_s * 1000000 if duration_s > 0 else None
-    last_progress_line = ""
+    # last_progress_line = "" # Removed unused variable
 
     # Read progress from stdout
     while True:
