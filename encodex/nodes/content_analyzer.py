@@ -152,10 +152,22 @@ def analyze_content(state: EncodExState) -> EncodExState:
         # Initialize Gemini client
         client = _initialize_genai_client()
 
-        # Process each chunk
-        all_results = []
+        # Select chunks for analysis: first, middle, last
+        num_chunks = len(state.chunk_paths)
+        selected_chunk_indices = set()
+        if num_chunks > 0:
+            selected_chunk_indices.add(0)  # First chunk
+        if num_chunks > 2:
+            selected_chunk_indices.add(num_chunks // 2) # Middle chunk
+        if num_chunks > 1:
+            selected_chunk_indices.add(num_chunks - 1) # Last chunk
 
-        for chunk_path in state.chunk_paths:
+        chunks_to_analyze = [state.chunk_paths[i] for i in sorted(list(selected_chunk_indices))]
+        print(f"Selected chunks for analysis: {chunks_to_analyze}")
+
+        # Process selected chunks
+        all_results = []
+        for chunk_path in chunks_to_analyze:
             print(f"Processing video chunk: {chunk_path}")
 
             # Upload to Gemini
