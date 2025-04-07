@@ -3,10 +3,11 @@ Content analyzer node for analyzing video content using Google Gemini.
 """
 
 import json
+import math # Add math for formatting if needed
 import os
 import re
 import time
-from typing import Any, Dict, List, Optional  # Added List
+from typing import Any, Dict, List, Optional
 
 from google import genai
 
@@ -382,6 +383,12 @@ def _parse_analysis_result(json_str: str) -> Dict[str, Any]:
         raise ValueError(f"Failed to parse JSON response: {e}")
 
 
+# Helper function to format seconds into SS.sss format
+def format_seconds(seconds: float) -> str:
+    """Formats seconds into a string with millisecond precision."""
+    return f"{seconds:.3f}"
+
+
 # Copied from segment_selector.py for self-containment
 def _parse_timestamp(timestamp_str: str) -> float:
     """
@@ -461,9 +468,13 @@ def analyze_content(state: EncodExState) -> EncodExState:
         state.error = "Missing video chunk paths"
         return state
 
-    # Initialize chunk_uri_map if it's None
+    # Initialize chunk_uri_map and chunk_start_times if they are None
     if state.chunk_uri_map is None:
+        print("Warning: chunk_uri_map not found in state, initializing.")
         state.chunk_uri_map = {}
+    if state.chunk_start_times is None: # Should be initialized by splitter now
+         print("Warning: chunk_start_times not found in state, initializing.")
+         state.chunk_start_times = {}
 
     try:
         print("Initializing Gemini client...")
@@ -491,6 +502,15 @@ def analyze_content(state: EncodExState) -> EncodExState:
         for chunk_path in chunks_to_analyze:
             print(f"--- Processing video chunk: {chunk_path} ---")
 
+            # --- Get Chunk Start Time Offset ---
+            chunk_start_offset = state.chunk_start_times.get(chunk_path)
+            if chunk_start_offset is None:
+                print(f"Warning: Could not find start time for chunk {chunk_path}. Assuming 0.0 offset.")
+                chunk_start_offset = 0.0
+            else:
+                print(f"Chunk starts at offset: {chunk_start_offset:.3f} seconds")
+            # --- End Get Chunk Start Time Offset ---
+
             # Get existing URI or None
             existing_uri = state.chunk_uri_map.get(chunk_path)
 
@@ -500,10 +520,12 @@ def analyze_content(state: EncodExState) -> EncodExState:
             if not video_file:
                 # Error handled within _get_or_upload_video, skip analysis for this chunk
                 print(f"Skipping analysis for chunk {chunk_path} due to file processing error.")
+                # Add a placeholder duration if skipping? For now, let's handle mismatch later.
+                # chunk_durations.append(0) # Or a better estimate
                 continue  # Move to the next chunk
 
             # Store the URI in the state map if it's not already there or if it was just uploaded
-            if chunk_path not in state.chunk_uri_map or state.chunk_uri_map[chunk_path] != video_file.uri:
+            if chunk_path not in state.chunk_uri_map or state.chunk_uri_map.get(chunk_path) != video_file.uri:
                 print(f"Updating state map: {chunk_path} -> {video_file.uri}")
                 state.chunk_uri_map[chunk_path] = video_file.uri
 
@@ -555,20 +577,64 @@ def analyze_content(state: EncodExState) -> EncodExState:
 
             # Parse the response
             print("Parsing analysis response...")
-            analysis_data = _parse_analysis_result(analysis_text)
-            print("Analysis response parsed successfully.")
-            print("--- Parsed Gemini Analysis Data ---")
-            print(json.dumps(analysis_data, indent=2))  # Log the parsed data
-            print("-----------------------------------")
-            all_results.append(analysis_data)
+            try:
+                analysis_data = _parse_analysis_result(analysis_text)
+                print("Analysis response parsed successfully.")
+
+                # --- Adjust Segment Timestamps ---
+                if "representative_segments" in analysis_data:
+                    print(f"Adjusting timestamps for {len(analysis_data['representative_segments'])} segments by {chunk_start_offset:.3f}s...")
+                    adjusted_segments = []
+                    for raw_seg in analysis_data["representative_segments"]:
+                        try:
+                            ts_range = raw_seg.get("timestamp_range", "0 - 0")
+                            start_str, end_str = ts_range.split(" - ")
+                            # Parse chunk-relative times
+                            chunk_rel_start = _parse_timestamp(start_str)
+                            chunk_rel_end = _parse_timestamp(end_str)
+
+                            # Calculate absolute times
+                            abs_start = chunk_rel_start + chunk_start_offset
+                            abs_end = chunk_rel_end + chunk_start_offset
+
+                            # Update the segment dictionary with absolute times string
+                            raw_seg["timestamp_range"] = f"{format_seconds(abs_start)} - {format_seconds(abs_end)}"
+                            adjusted_segments.append(raw_seg)
+                            print(f"  Adjusted segment: {raw_seg.get('description', 'N/A')[:30]}... -> {raw_seg['timestamp_range']}")
+
+                        except Exception as seg_e:
+                            print(f"  Warning: Could not parse/adjust segment timestamp '{ts_range}': {seg_e}")
+                            adjusted_segments.append(raw_seg) # Keep original if parsing fails
+
+                    analysis_data["representative_segments"] = adjusted_segments
+                # --- End Adjust Segment Timestamps ---
+
+                print("--- Parsed and Adjusted Gemini Analysis Data ---")
+                print(json.dumps(analysis_data, indent=2))
+                print("---------------------------------------------")
+                all_results.append(analysis_data)
+
+            except ValueError as parse_e:
+                 print(f"Error parsing analysis result for {chunk_path}: {parse_e}")
+                 continue # Skip if parsing fails
 
             print(f"--- Finished processing chunk: {chunk_path} ---")
 
         # Combine results using weighted averaging
         print("Combining analysis results...")
         if all_results:
+            # Ensure chunk_durations has the same length as all_results
+            if len(chunk_durations) != len(all_results):
+                 print(f"Warning: Mismatch between results ({len(all_results)}) and durations ({len(chunk_durations)}). Using equal weights for aggregation.")
+                 # Fallback to equal weights if durations are inconsistent
+                 num_results = len(all_results)
+                 if num_results > 0:
+                     chunk_durations = [1.0] * num_results # Use dummy durations for the function call
+                 else:
+                     chunk_durations = [] # Handle case with zero results
+
             # Use the aggregation function for weighted averaging
-            result = _aggregate_analysis_results(all_results, chunk_durations)
+            result = _aggregate_analysis_results(all_results, chunk_durations) # Aggregation uses adjusted data now
             print("Results aggregated successfully.")
 
             # Map aggregated result to ContentAnalysis model
@@ -576,28 +642,29 @@ def analyze_content(state: EncodExState) -> EncodExState:
             content_analysis = _map_to_content_analysis(result)
             print("Mapping successful.")
 
-            # Extract and map representative segments
-            print("Extracting and mapping representative segments...")
+            # Extract and map representative segments (using absolute timestamps)
+            print("Extracting and mapping representative segments (with absolute timestamps)...")
             raw_segments = result.get("representative_segments", [])
             selected_segments: List[Segment] = []
             for raw_seg in raw_segments:
                 try:
-                    timestamp_range = raw_seg.get("timestamp_range", "0 - 0")
+                    timestamp_range = raw_seg.get("timestamp_range", "0.000 - 0.000") # Use adjusted range
+                    # Parse the already absolute timestamps
                     start_str, end_str = timestamp_range.split(" - ")
-                    start_time = _parse_timestamp(start_str)
+                    start_time = _parse_timestamp(start_str) # Should handle "SS.sss" format
                     end_time = _parse_timestamp(end_str)
 
                     segment = Segment(
                         complexity=raw_seg.get("complexity", "Unknown"),
-                        timestamp_range=timestamp_range,
+                        timestamp_range=timestamp_range, # Store the absolute range string
                         description=raw_seg.get("description", ""),
-                        start_time=start_time,
-                        end_time=end_time,
+                        start_time=start_time, # Store absolute start time
+                        end_time=end_time,     # Store absolute end time
                     )
                     selected_segments.append(segment)
                 except Exception as seg_e:
-                    print(f"Warning: Could not parse segment data: {raw_seg}. Error: {seg_e}")
-            print(f"Extracted {len(selected_segments)} segments.")
+                    print(f"Warning: Could not parse final segment data: {raw_seg}. Error: {seg_e}")
+            print(f"Extracted {len(selected_segments)} segments with absolute times.")
 
             # Update state
             print("Updating state with content analysis and selected segments...")

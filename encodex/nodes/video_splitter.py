@@ -69,9 +69,11 @@ def split_video(state: EncodExState) -> EncodExState:
 
         # Create chunks
         chunks = []
+        # Initialize the dictionary in the state
+        state.chunk_start_times = {} # Ensure it's empty before starting
 
         for i in range(num_chunks):
-            start_time = i * chunk_duration
+            start_time = i * chunk_duration # This is the offset we need
             output_path = os.path.join(base_path, f"{name}_{i + 1:03d}{ext}")
 
             cmd = [
@@ -88,7 +90,7 @@ def split_video(state: EncodExState) -> EncodExState:
                 output_path,
             ]
 
-            print(f"Creating chunk {i + 1}/{num_chunks}: {output_path}")
+            print(f"Creating chunk {i + 1}/{num_chunks}: {output_path} (starts at {start_time:.2f}s)") # Log start time
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             if result.returncode != 0:
@@ -98,6 +100,8 @@ def split_video(state: EncodExState) -> EncodExState:
             # Verify file was created and is not empty
             if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
                 chunks.append(output_path)
+                # Store the start time for this chunk
+                state.chunk_start_times[output_path] = start_time
             else:
                 print(f"Warning: Chunk {i + 1} was not created or is empty")
 
