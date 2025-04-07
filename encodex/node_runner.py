@@ -15,7 +15,7 @@ def run_node(
     node_name: str,
     input_state: Optional[EncodExState] = None,
     input_file: Optional[str] = None,
-    **kwargs: Any # Accept arbitrary keyword arguments
+    **kwargs: Any,  # Accept arbitrary keyword arguments
 ) -> EncodExState:
     """
     Run a single node with a given state and optional node-specific arguments.
@@ -59,17 +59,16 @@ def run_node(
 
     # Assume the first argument is always the state, or look for 'state' param
     first_param_name = next(iter(node_params))
-    if 'state' in node_params:
-         call_args['state'] = current_state
+    if "state" in node_params:
+        call_args["state"] = current_state
     elif node_params[first_param_name].annotation == EncodExState:
-         call_args[first_param_name] = current_state
+        call_args[first_param_name] = current_state
     else:
-         # This case should ideally not happen if nodes follow the convention (state) -> state
-         # Or if they type hint the state parameter correctly
-         print(f"Warning: Node function {node_name} does not seem to accept 'state: EncodExState' argument correctly.")
-         # Fallback: pass state as the first argument anyway
-         call_args[first_param_name] = current_state
-
+        # This case should ideally not happen if nodes follow the convention (state) -> state
+        # Or if they type hint the state parameter correctly
+        print(f"Warning: Node function {node_name} does not seem to accept 'state: EncodExState' argument correctly.")
+        # Fallback: pass state as the first argument anyway
+        call_args[first_param_name] = current_state
 
     # Add other arguments from kwargs if the function accepts them
     for key, value in kwargs.items():
@@ -81,22 +80,18 @@ def run_node(
             # print(f"Info: Argument '{key}' provided but not accepted by node '{node_name}'. Ignoring.")
             pass
 
-
     # Run the node with prepared arguments
     try:
         updated_state = node_func(**call_args)
         # Ensure the node returned a state object
         if not isinstance(updated_state, EncodExState):
-             # If a node modifies state in-place and returns None, handle it
-             if updated_state is None and 'state' in call_args:
-                 print(f"Warning: Node '{node_name}' returned None. Assuming state was modified in-place.")
-                 return call_args['state'] # Return the potentially modified input state
-             else:
-                 returned_type = type(updated_state)
-                 raise TypeError(
-                     f"Node '{node_name}' did not return an EncodExState object. "
-                     f"Returned: {returned_type}"
-                 )
+            # If a node modifies state in-place and returns None, handle it
+            if updated_state is None and "state" in call_args:
+                print(f"Warning: Node '{node_name}' returned None. Assuming state was modified in-place.")
+                return call_args["state"]  # Return the potentially modified input state
+            else:
+                returned_type = type(updated_state)
+                raise TypeError(f"Node '{node_name}' did not return an EncodExState object. Returned: {returned_type}")
         return updated_state
     except Exception as e:
         # Optionally wrap the exception or add more context
@@ -135,13 +130,13 @@ def save_state_to_json(state: EncodExState, output_path: str) -> None:
     """
     # Create directory if it doesn't exist
     output_dir = os.path.dirname(output_path)
-    if output_dir: # Ensure dirname is not empty (e.g., for relative paths in cwd)
+    if output_dir:  # Ensure dirname is not empty (e.g., for relative paths in cwd)
         os.makedirs(output_dir, exist_ok=True)
 
     # Convert to dict and save
     # Use model_dump for Pydantic v2, exclude_none=True is default behavior
     # Use mode='json' to ensure types like Enums are serialized correctly
-    state_dict = state.model_dump(mode='json', exclude_none=True)
+    state_dict = state.model_dump(mode="json", exclude_none=True)
 
     with open(output_path, "w") as f:
         # Use indent=2 for readability

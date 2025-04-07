@@ -41,8 +41,7 @@ def create_graph():
     workflow.add_edge("input_processor", "low_res_encoder")
     workflow.add_edge("low_res_encoder", "video_splitter")
     workflow.add_edge("video_splitter", "content_analyzer")
-    # workflow.add_edge("content_analyzer", "segment_selector") # Removed
-    workflow.add_edge("content_analyzer", "test_encoding_generator") # Changed source
+    workflow.add_edge("content_analyzer", "test_encoding_generator")
     workflow.add_edge("test_encoding_generator", "quality_metrics_calculator")
     workflow.add_edge("quality_metrics_calculator", "data_aggregator")
     workflow.add_edge("data_aggregator", "recommendation_engine")

@@ -32,8 +32,8 @@ def run_single_node(args):
 
         # Prepare node-specific arguments from CLI flags
         node_kwargs = {}
-        if hasattr(args, 'use_gpu') and args.use_gpu: # Check if arg exists and is True
-            node_kwargs['use_gpu'] = True
+        if hasattr(args, "use_gpu") and args.use_gpu:  # Check if arg exists and is True
+            node_kwargs["use_gpu"] = True
             # print("CLI flag --use-gpu detected.") # Optional: Add confirmation
 
         # Run the node, passing potential node-specific arguments
@@ -106,8 +106,8 @@ def run_full_workflow(args):
 
         # Check for errors in the final state
         if not final_state_obj or not isinstance(final_state_obj, EncodExState):
-             print(f"Workflow did not return a valid EncodExState object. Output: {final_state_dict}", file=sys.stderr)
-             sys.exit(1)
+            print(f"Workflow did not return a valid EncodExState object. Output: {final_state_dict}", file=sys.stderr)
+            sys.exit(1)
 
         if final_state_obj.error:
             print(f"Workflow Error: {final_state_obj.error}", file=sys.stderr)
@@ -305,8 +305,8 @@ def main():
     # Add the --use-gpu flag here
     node_parser.add_argument(
         "--use-gpu",
-        action="store_true", # Makes it a boolean flag
-        help="Attempt to use GPU for encoding (if applicable to the node, e.g., low_res_encoder)"
+        action="store_true",  # Makes it a boolean flag
+        help="Attempt to use GPU for encoding (if applicable to the node, e.g., low_res_encoder)",
     )
 
     # Workflow runner command
