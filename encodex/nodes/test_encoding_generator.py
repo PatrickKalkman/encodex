@@ -58,7 +58,7 @@ def _run_ffmpeg_command(cmd: List[str], duration_s: float) -> Optional[str]:
             # Print progress on the same line
             progress_line = f"\rProgress: {progress:.1f}%"
             print(progress_line, end="")
-            last_progress_line = progress_line # Store last line to overwrite later
+            # last_progress_line = progress_line # No longer needed for clearing
             sys.stdout.flush()  # Ensure it prints immediately
         # Removed explicit handling of 'progress=end' within the loop
 
