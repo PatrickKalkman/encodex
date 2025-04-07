@@ -387,40 +387,41 @@ def _parse_timestamp(timestamp_str: str) -> float:
 
 def _map_to_content_analysis(analysis_data: Dict[str, Any]) -> ContentAnalysis:
     """Map raw analysis data to ContentAnalysis model."""
-    video_assessment = analysis_data.get("video_assessment", {})
+    # Corrected key from "video_assessment" to "assessment"
+    assessment = analysis_data.get("assessment", {})
 
     return ContentAnalysis(
         motion_intensity=ContentCharacteristic(
-            score=float(video_assessment.get("motion_intensity", {}).get("score", 0)),
-            justification=video_assessment.get("motion_intensity", {}).get("justification", ""),
+            score=float(assessment.get("motion_intensity", {}).get("score", 0)),
+            justification=assessment.get("motion_intensity", {}).get("justification", ""),
         ),
         temporal_complexity=ContentCharacteristic(
-            score=float(video_assessment.get("temporal_complexity", {}).get("score", 0)),
-            justification=video_assessment.get("temporal_complexity", {}).get("justification", ""),
+            score=float(assessment.get("temporal_complexity", {}).get("score", 0)),
+            justification=assessment.get("temporal_complexity", {}).get("justification", ""),
         ),
         spatial_complexity=ContentCharacteristic(
-            score=float(video_assessment.get("spatial_complexity", {}).get("score", 0)),
-            justification=video_assessment.get("spatial_complexity", {}).get("justification", ""),
+            score=float(assessment.get("spatial_complexity", {}).get("score", 0)),
+            justification=assessment.get("spatial_complexity", {}).get("justification", ""),
         ),
         scene_change_frequency=ContentCharacteristic(
-            score=float(video_assessment.get("scene_change_frequency", {}).get("score", 0)),
-            justification=video_assessment.get("scene_change_frequency", {}).get("justification", ""),
+            score=float(assessment.get("scene_change_frequency", {}).get("score", 0)),
+            justification=assessment.get("scene_change_frequency", {}).get("justification", ""),
         ),
         texture_detail_prevalence=ContentCharacteristic(
-            score=float(video_assessment.get("texture_detail_prevalence", {}).get("score", 0)),
-            justification=video_assessment.get("texture_detail_prevalence", {}).get("justification", ""),
+            score=float(assessment.get("texture_detail_prevalence", {}).get("score", 0)),
+            justification=assessment.get("texture_detail_prevalence", {}).get("justification", ""),
         ),
         contrast_levels=ContentCharacteristic(
-            score=float(video_assessment.get("contrast_levels", {}).get("score", 0)),
-            justification=video_assessment.get("contrast_levels", {}).get("justification", ""),
+            score=float(assessment.get("contrast_levels", {}).get("score", 0)),
+            justification=assessment.get("contrast_levels", {}).get("justification", ""),
         ),
         animation_type=AnimationType(
-            type=video_assessment.get("animation_type", {}).get("type", "Unknown"),
-            justification=video_assessment.get("animation_type", {}).get("justification", ""),
+            type=assessment.get("animation_type", {}).get("type", "Unknown"),
+            justification=assessment.get("animation_type", {}).get("justification", ""),
         ),
         grain_noise_levels=ContentCharacteristic(
-            score=float(video_assessment.get("grain_noise_levels", {}).get("score", 0)),
-            justification=video_assessment.get("grain_noise_levels", {}).get("justification", ""),
+            score=float(assessment.get("grain_noise_levels", {}).get("score", 0)),
+            justification=assessment.get("grain_noise_levels", {}).get("justification", ""),
         ),
     )
 
