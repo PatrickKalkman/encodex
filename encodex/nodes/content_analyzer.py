@@ -6,7 +6,7 @@ import json
 import os
 import re
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from google import genai
 
@@ -47,21 +47,83 @@ def _initialize_genai_client() -> genai.Client:
     return genai.Client(api_key=api_key)
 
 
-def _upload_video_to_gemini(client: genai.Client, video_path: str) -> Any:
-    """Upload a video file to Gemini API."""
-    print(f"Uploading {video_path} to Gemini API...")
-    video_file = client.files.upload(file=video_path)
+def _get_or_upload_video(client: genai.Client, video_path: str, existing_uri: Optional[str]) -> Optional[Any]:
+    """
+    Get video file from Gemini using URI if available and ACTIVE, otherwise upload.
 
-    # Wait for the video to be processed
-    while video_file.state.name == "PROCESSING":
-        print("Processing video...")
-        time.sleep(5)
-        video_file = client.files.get(name=video_file.name)
+    Args:
+        client: Initialized Gemini client.
+        video_path: Local path to the video file.
+        existing_uri: Existing Gemini File API URI, if known.
 
-    if video_file.state.name != "ACTIVE":
-        raise ValueError(f"Video file processing failed: {video_file.state.name}")
+    Returns:
+        The Gemini file object if ACTIVE, otherwise None.
+    """
+    video_file = None
 
-    return video_file
+    # 1. Try using the existing URI if provided
+    if existing_uri:
+        print(f"Attempting to retrieve existing file using URI: {existing_uri}")
+        try:
+            video_file = client.files.get(name=existing_uri)
+            print(f"Retrieved file: {video_file.name} (State: {video_file.state.name})")
+            # If retrieved, check its state and wait if necessary
+            while video_file.state.name == "PROCESSING":
+                print(f"File {video_file.name} is still processing, waiting...")
+                time.sleep(5)
+                video_file = client.files.get(name=video_file.name)
+                print(f"File state: {video_file.state.name}")
+
+            if video_file.state.name == "ACTIVE":
+                print(f"Using existing ACTIVE file: {video_file.name}")
+                return video_file
+            else:
+                print(f"Existing file {video_file.name} is not ACTIVE (State: {video_file.state.name}). Will re-upload.")
+                video_file = None # Reset video_file to trigger upload
+
+        except Exception as e:
+            print(f"Failed to retrieve or process existing file URI {existing_uri}: {e}. Will attempt upload.")
+            video_file = None # Reset video_file to trigger upload
+
+    # 2. Upload if no valid existing file found
+    if video_file is None:
+        if not os.path.exists(video_path):
+             print(f"Error: Local video file not found for upload: {video_path}")
+             return None # Cannot upload if local file is missing
+
+        print(f"Uploading {video_path} to Gemini API...")
+        try:
+            video_file = client.files.upload(file=video_path)
+            print(f"Uploaded file: {video_file.name} (State: {video_file.state.name})")
+        except Exception as e:
+            print(f"Error uploading file {video_path}: {e}")
+            return None # Upload failed
+
+        # Wait for the video to be processed after upload
+        while video_file.state.name == "PROCESSING":
+            print(f"Processing uploaded video {video_file.name}...")
+            time.sleep(5)
+            video_file = client.files.get(name=video_file.name)
+            print(f"File state: {video_file.state.name}")
+
+    # 3. Final check on state after retrieval or upload attempt
+    if video_file and video_file.state.name == "ACTIVE":
+        print(f"File {video_file.name} is ACTIVE.")
+        return video_file
+    elif video_file:
+        print(f"Error: File {video_file.name} ended in non-ACTIVE state: {video_file.state.name}")
+        # Optionally try to delete the failed file?
+        # try:
+        #     print(f"Attempting to delete non-ACTIVE file {video_file.name}...")
+        #     client.files.delete(name=video_file.name)
+        #     print("Deleted.")
+        # except Exception as del_e:
+        #     print(f"Could not delete non-ACTIVE file {video_file.name}: {del_e}")
+        return None
+    else:
+        # This case happens if upload failed or local file was missing
+        print(f"Could not obtain an ACTIVE video file for {video_path}.")
+        return None
 
 
 def _analyze_with_gemini(client: genai.Client, video_file: Any) -> str:
@@ -150,12 +212,16 @@ def analyze_content(state: EncodExState) -> EncodExState:
         state.error = "Missing video chunk paths"
         return state
 
+    # Initialize chunk_uri_map if it's None
+    if state.chunk_uri_map is None:
+        state.chunk_uri_map = {}
+
     try:
         print("Initializing Gemini client...")
         client = _initialize_genai_client()
         print("Gemini client initialized.")
 
-        # Select chunks for analysis: first, middle, last
+        # Select chunks for analysis: first, middle, last (or fewer if not enough chunks)
         num_chunks = len(state.chunk_paths)
         selected_chunk_indices = set()
         if num_chunks > 0:
@@ -173,16 +239,35 @@ def analyze_content(state: EncodExState) -> EncodExState:
         for chunk_path in chunks_to_analyze:
             print(f"--- Processing video chunk: {chunk_path} ---")
 
-            # Upload to Gemini
-            print(f"Uploading chunk {chunk_path} to Gemini...")
-            video_file = _upload_video_to_gemini(client, chunk_path)
-            print(f"Chunk uploaded successfully. File URI: {video_file.uri}")
+            # Get existing URI or None
+            existing_uri = state.chunk_uri_map.get(chunk_path)
 
-            # Analyze with Gemini
+            # Try to get existing file or upload new one
+            video_file = _get_or_upload_video(client, chunk_path, existing_uri)
+
+            if not video_file:
+                # Error handled within _get_or_upload_video, skip analysis for this chunk
+                print(f"Skipping analysis for chunk {chunk_path} due to file processing error.")
+                # Optionally set a partial error state?
+                # state.error = f"Failed to process chunk {chunk_path}" # This might halt workflow
+                continue # Move to the next chunk
+
+            # Store the URI in the state map if it's not already there or if it was just uploaded
+            if chunk_path not in state.chunk_uri_map or state.chunk_uri_map[chunk_path] != video_file.uri:
+                 print(f"Updating state map: {chunk_path} -> {video_file.uri}")
+                 state.chunk_uri_map[chunk_path] = video_file.uri
+
+            # Analyze with Gemini using the ACTIVE file
             print(f"Requesting analysis from Gemini for {video_file.uri}...")
-            analysis_text = _analyze_with_gemini(client, video_file)
-            print("Received analysis response from Gemini.")
-            # print(f"Raw analysis text:\n{analysis_text}") # Optional: Log raw response
+            try:
+                analysis_text = _analyze_with_gemini(client, video_file)
+                print("Received analysis response from Gemini.")
+                # print(f"Raw analysis text:\n{analysis_text}") # Optional: Log raw response
+            except Exception as analysis_e:
+                 print(f"Error during Gemini analysis for {video_file.uri}: {analysis_e}")
+                 # Decide how to handle: skip chunk, set error, etc.
+                 # For now, let's skip this chunk's result but continue with others
+                 continue
 
             # Parse the response
             print("Parsing analysis response...")
@@ -192,18 +277,17 @@ def analyze_content(state: EncodExState) -> EncodExState:
             all_results.append(analysis_data)
 
             # Optionally delete the file from Gemini
-            # Optionally delete the file from Gemini
-            # print(f"Deleting file {video_file.name} from Gemini...")
-            # client.files.delete(name=video_file.name)
-            # print("File deleted.")
+            # Note: We are NOT deleting the file from Gemini anymore,
+            # as we want to reuse the URI later.
             print(f"--- Finished processing chunk: {chunk_path} ---")
 
-        # Combine results (using first result for now, will be enhanced later)
+        # Combine results (using first *successful* result for now)
         print("Combining analysis results...")
         if all_results:
             # TODO: Implement a more sophisticated result combination strategy
-            print("Using analysis result from the first chunk.")
-            result = all_results[0]
+            # For now, just use the first successful analysis we got.
+            print(f"Using analysis result from the first successfully analyzed chunk.")
+            result = all_results[0] # Assumes at least one chunk succeeded
 
             # Map to ContentAnalysis model
             print("Mapping raw analysis data to ContentAnalysis model...")
