@@ -68,8 +68,9 @@ def create_low_res_preview(state: EncodExState, use_gpu: bool = False) -> EncodE
                 "-c:v",
                 "h264_videotoolbox",
                 "-b:v",
-                "500k",  # Target bitrate for low-res preview
-                "-allow_sw", "1", # Enable software fallback (provide value '1')
+                "300k",  # Target bitrate for low-res preview
+                "-allow_sw",
+                "1",  # Enable software fallback (provide value '1')
                 # Note: '-crf' and '-preset' are not typically used with videotoolbox
             ]
         else:
@@ -90,20 +91,20 @@ def create_low_res_preview(state: EncodExState, use_gpu: bool = False) -> EncodE
         final_cmd = base_cmd + progress_cmd + encoder_cmd + ["-an", low_res_path]
 
         # Run FFmpeg using Popen to capture progress
-        print(f"Running FFmpeg command: {' '.join(final_cmd)}") # Keep this for debugging
+        print(f"Running FFmpeg command: {' '.join(final_cmd)}")  # Keep this for debugging
         process = subprocess.Popen(
             final_cmd,
-            stdout=subprocess.PIPE, # Capture progress from stdout
-            stderr=subprocess.PIPE, # Capture errors from stderr
-            text=True, # Decode output as text
-            encoding='utf-8', # Specify encoding
-            bufsize=1 # Line buffered
+            stdout=subprocess.PIPE,  # Capture progress from stdout
+            stderr=subprocess.PIPE,  # Capture errors from stderr
+            text=True,  # Decode output as text
+            encoding="utf-8",  # Specify encoding
+            bufsize=1,  # Line buffered
         )
 
         # Get total duration for percentage calculation
         total_duration_ms = None
         if state.video_metadata and state.video_metadata.duration:
-            total_duration_ms = state.video_metadata.duration * 1000000 # Convert seconds to microseconds
+            total_duration_ms = state.video_metadata.duration * 1000000  # Convert seconds to microseconds
 
         print("Encoding low-res preview...")
         # Read progress from stdout
@@ -121,13 +122,13 @@ def create_low_res_preview(state: EncodExState, use_gpu: bool = False) -> EncodE
                 progress = (current_ms / total_duration_ms) * 100
                 # Print progress on the same line
                 print(f"\rProgress: {progress:.1f}%", end="")
-                sys.stdout.flush() # Ensure it prints immediately
+                sys.stdout.flush()  # Ensure it prints immediately
 
         # Wait for the process to finish and capture remaining output/errors
         stdout, stderr = process.communicate()
 
         # Print final newline after progress updates
-        print("\rEncoding complete.      ") # Overwrite progress line
+        print("\rEncoding complete.      ")  # Overwrite progress line
 
         if process.returncode != 0:
             state.error = f"FFmpeg error (code {process.returncode}): {stderr}"
