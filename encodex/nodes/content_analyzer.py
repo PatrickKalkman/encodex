@@ -78,7 +78,10 @@ def _get_or_upload_video(client: genai.Client, video_path: str, existing_uri: Op
                 print(f"Using existing ACTIVE file: {video_file.name}")
                 return video_file
             else:
-                print(f"Existing file {video_file.name} is not ACTIVE (State: {video_file.state.name}). Will re-upload.")
+                print(
+                    f"Existing file {video_file.name} is not ACTIVE "
+                    f"(State: {video_file.state.name}). Will re-upload."
+                )
                 video_file = None # Reset video_file to trigger upload
 
         except Exception as e:
