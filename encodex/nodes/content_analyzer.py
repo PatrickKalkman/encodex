@@ -41,6 +41,72 @@ useful for encoding tests, including high-complexity, medium-complexity, and
 low-complexity sections.
 
 Provide the output in JSON format.
+
+Use the following format:
+{
+  "assessment": {
+    "motion_intensity": {
+      "score": 75,
+      "justification": "The video contains numerous high-action sequences including fights, explosions, magical effects, and fast camera movements (establishing shots, chases). While there are some static logo screens and dialogue scenes, the overall motion level is high."
+    },
+    "temporal_complexity": {
+      "score": 80,
+      "justification": "High temporal complexity due to frequent scene cuts, fast and often unpredictable motion (explosions, character powers, crowd movement), and significant use of particle effects and flashing lights (lightning, magic). Predicting subsequent frames is challenging."
+    },
+    "spatial_complexity": {
+      "score": 85,
+      "justification": "Very high spatial complexity. Scenes feature intricate details like ancient carvings, complex costumes, detailed rock textures, large crowds, detailed cityscapes (both ancient and modern), and elaborate CGI environments. Many frames are packed with visual information."
+    },
+    "scene_change_frequency": {
+      "score": 85,
+      "justification": "The video exhibits very frequent scene changes, typical of trailers and action sequences. Cuts occur rapidly, especially during the opening studio/DC logo montages and the action/historical segments."
+    },
+    "texture_detail_prevalence": {
+      "score": 70,
+      "justification": "Significant texture detail is prevalent, including rock faces, ancient stonework/carvings, clothing fabrics, dust, skin detail, and environmental textures. While some CGI elements might be smoother, detailed textures are common."
+    },
+    "contrast_levels": {
+      "score": 80,
+      "justification": "High contrast is present throughout. The video alternates between very dark scenes (logo sequences, cave interiors, night scenes) and scenes with extremely bright elements (sunlit landscapes, explosions, magical energy bursts)."
+    },
+    "animation_type": {
+      "type": "Live Action / CGI Hybrid",
+      "justification": "The video consists primarily of live-action footage heavily integrated with extensive computer-generated imagery (CGI) for visual effects, character abilities, environments, and large-scale destruction."
+    },
+    "grain_noise_levels": {
+      "score": 40,
+      "justification": "Moderate grain/noise. Some sequences, particularly the historical/ancient mining scenes (e.g., 1:45-2:30), appear to have intentional grain or stylization applied. Darker scenes may exhibit some minor digital noise, but it's not overly dominant across the entire sample."
+    }
+  },
+  "representative_segments": [
+    {
+      "complexity": "Low",
+      "timestamp_range": "0:15 - 0:21",
+      "description": "New Line Cinema logo sequence. Relatively static logo with smooth background cloud animation."
+    },
+    {
+      "complexity": "Medium",
+      "timestamp_range": "10:53 - 11:08",
+      "description": "Dialogue scene outside the van in the desert. Moderate character motion, clear textures on characters and van, relatively stable background, bright daylight."
+    },
+    {
+      "complexity": "High",
+      "timestamp_range": "1:45 - 1:59",
+      "description": "Ancient mining scene. High spatial detail (rock textures, numerous people), significant motion (crowds mining), desaturated look potentially adding noise/grain complexity."
+    },
+    {
+      "complexity": "High",
+      "timestamp_range": "5:39 - 5:54",
+      "description": "King puts on the crown, triggering a massive magical explosion. High motion, intense particle effects, high contrast, rapid destruction, challenging for motion estimation."
+    },
+    {
+      "complexity": "High",
+      "timestamp_range": "17:21 - 17:40",
+      "description": "Black Adam emerges and attacks soldiers in the dark cave. Very fast action, significant magical/electrical CGI effects, low light conditions with high contrast highlights, multiple moving figures."
+    }
+  ]
+}
+
 """
 
 
@@ -51,6 +117,141 @@ def _initialize_genai_client() -> genai.Client:
         raise ValueError("GEMINI_API_KEY environment variable not set.")
 
     return genai.Client(api_key=api_key)
+
+
+def _aggregate_analysis_results(all_results: List[Dict[str, Any]], chunk_durations: List[float]) -> Dict[str, Any]:
+    """
+    Aggregate analysis results from multiple chunks using duration-weighted averaging.
+
+    Args:
+        all_results: List of parsed analysis results from different chunks
+        chunk_durations: List of durations (in seconds) for each analyzed chunk
+
+    Returns:
+        Combined analysis result
+    """
+    print("Aggregating analysis results from multiple chunks...")
+
+    if not all_results:
+        raise ValueError("No analysis results to aggregate")
+
+    # Normalize chunk durations to get weights
+    total_duration = sum(chunk_durations)
+    if total_duration == 0:
+        # Equal weights if durations are unknown
+        weights = [1.0 / len(chunk_durations) for _ in chunk_durations]
+    else:
+        weights = [duration / total_duration for duration in chunk_durations]
+
+    print(f"Using weights for aggregation: {weights}")
+
+    # Initialize combined result structure based on first result
+    combined_result = {"assessment": {}, "representative_segments": []}
+
+    # Numerical characteristics to aggregate
+    characteristics = [
+        "motion_intensity",
+        "temporal_complexity",
+        "spatial_complexity",
+        "scene_change_frequency",
+        "texture_detail_prevalence",
+        "contrast_levels",
+        "grain_noise_levels",
+    ]
+
+    # Weighted average for numerical scores
+    for char in characteristics:
+        weighted_score = 0.0
+        weighted_justifications = []
+
+        for i, result in enumerate(all_results):
+            if "assessment" in result and char in result["assessment"]:
+                char_data = result["assessment"][char]
+                score = float(char_data.get("score", 0))
+                justification = char_data.get("justification", "")
+
+                weighted_score += score * weights[i]
+                if justification:
+                    weighted_justifications.append(f"Chunk {i + 1}: {justification}")
+
+        # Create aggregated characteristic
+        combined_result["assessment"][char] = {
+            "score": round(weighted_score, 1),  # Round to one decimal
+            "justification": " ".join(weighted_justifications),
+        }
+
+    # Handle animation type (non-numerical)
+    animation_types = {}
+    for i, result in enumerate(all_results):
+        if "assessment" in result and "animation_type" in result["assessment"]:
+            anim_type = result["assessment"]["animation_type"].get("type", "Unknown")
+            if anim_type in animation_types:
+                animation_types[anim_type] += weights[i]
+            else:
+                animation_types[anim_type] = weights[i]
+
+    # Select animation type with highest weight
+    if animation_types:
+        majority_type = max(animation_types.items(), key=lambda x: x[1])[0]
+        type_justifications = []
+
+        for i, result in enumerate(all_results):
+            if "assessment" in result and "animation_type" in result["assessment"]:
+                justification = result["assessment"]["animation_type"].get("justification", "")
+                if justification:
+                    type_justifications.append(f"Chunk {i + 1}: {justification}")
+
+        combined_result["assessment"]["animation_type"] = {
+            "type": majority_type,
+            "justification": " ".join(type_justifications),
+        }
+
+    # Combine and deduplicate representative segments
+    all_segments = []
+    for result in all_results:
+        segments = result.get("representative_segments", [])
+        for segment in segments:
+            all_segments.append(segment)
+
+    # Select diverse segments by complexity
+    complexity_categories = {"Low": [], "Medium": [], "High": [], "Ultra-high": []}
+
+    for segment in all_segments:
+        complexity = segment.get("complexity", "Unknown")
+        if complexity in complexity_categories:
+            complexity_categories[complexity].append(segment)
+
+    # Take best segments from each complexity category
+    selected_segments = []
+
+    # If we have segments in all categories, select top ones
+    for category in ["Low", "Medium", "High", "Ultra-high"]:
+        category_segments = complexity_categories[category]
+        if category_segments:
+            # Sort by description length as a heuristic for quality of description
+            category_segments.sort(key=lambda x: len(x.get("description", "")), reverse=True)
+            # Take up to 2 segments from each category, prioritizing higher complexities
+            max_per_category = 3 if category in ["High", "Ultra-high"] else 1
+            selected_segments.extend(category_segments[:max_per_category])
+
+    # Limit to a reasonable number (5-7 segments)
+    if len(selected_segments) > 7:
+        # Prioritize High and Medium complexity if we need to reduce
+        categorized = {"High": [], "Medium": [], "Low": [], "Ultra-high": []}
+        for seg in selected_segments:
+            categorized[seg.get("complexity", "Medium")].append(seg)
+
+        # Rebuild with priority
+        selected_segments = []
+        selected_segments.extend(categorized["High"][:3])  # Up to 3 High
+        selected_segments.extend(categorized["Ultra-high"][:2])  # Up to 2 Ultra-high
+        selected_segments.extend(categorized["Medium"][:1])  # Up to 1 Medium
+        selected_segments.extend(categorized["Low"][:1])  # Up to 1 Low
+
+    combined_result["representative_segments"] = selected_segments
+
+    print(f"Successfully aggregated results from {len(all_results)} chunks")
+    return combined_result
 
 
 def _get_or_upload_video(client: genai.Client, video_path: str, existing_uri: Optional[str]) -> Optional[Any]:
@@ -85,20 +286,19 @@ def _get_or_upload_video(client: genai.Client, video_path: str, existing_uri: Op
                 return video_file
             else:
                 print(
-                    f"Existing file {video_file.name} is not ACTIVE "
-                    f"(State: {video_file.state.name}). Will re-upload."
+                    f"Existing file {video_file.name} is not ACTIVE (State: {video_file.state.name}). Will re-upload."
                 )
-                video_file = None # Reset video_file to trigger upload
+                video_file = None  # Reset video_file to trigger upload
 
         except Exception as e:
             print(f"Failed to retrieve or process existing file URI {existing_uri}: {e}. Will attempt upload.")
-            video_file = None # Reset video_file to trigger upload
+            video_file = None  # Reset video_file to trigger upload
 
     # 2. Upload if no valid existing file found
     if video_file is None:
         if not os.path.exists(video_path):
-             print(f"Error: Local video file not found for upload: {video_path}")
-             return None # Cannot upload if local file is missing
+            print(f"Error: Local video file not found for upload: {video_path}")
+            return None  # Cannot upload if local file is missing
 
         print(f"Uploading {video_path} to Gemini API...")
         try:
@@ -106,7 +306,7 @@ def _get_or_upload_video(client: genai.Client, video_path: str, existing_uri: Op
             print(f"Uploaded file: {video_file.name} (State: {video_file.state.name})")
         except Exception as e:
             print(f"Error uploading file {video_path}: {e}")
-            return None # Upload failed
+            return None  # Upload failed
 
         # Wait for the video to be processed after upload
         while video_file.state.name == "PROCESSING":
@@ -257,12 +457,15 @@ def analyze_content(state: EncodExState) -> EncodExState:
         if num_chunks > 0:
             selected_chunk_indices.add(0)  # First chunk
         if num_chunks > 2:
-            selected_chunk_indices.add(num_chunks // 2) # Middle chunk
+            selected_chunk_indices.add(num_chunks // 2)  # Middle chunk
         if num_chunks > 1:
-            selected_chunk_indices.add(num_chunks - 1) # Last chunk
+            selected_chunk_indices.add(num_chunks - 1)  # Last chunk
 
         chunks_to_analyze = [state.chunk_paths[i] for i in sorted(list(selected_chunk_indices))]
         print(f"Selected chunks for analysis: {chunks_to_analyze}")
+
+        # Store chunk durations for weighted averaging
+        chunk_durations = []
 
         # Process selected chunks
         all_results = []
@@ -278,51 +481,79 @@ def analyze_content(state: EncodExState) -> EncodExState:
             if not video_file:
                 # Error handled within _get_or_upload_video, skip analysis for this chunk
                 print(f"Skipping analysis for chunk {chunk_path} due to file processing error.")
-                # Optionally set a partial error state?
-                # state.error = f"Failed to process chunk {chunk_path}" # This might halt workflow
-                continue # Move to the next chunk
+                continue  # Move to the next chunk
 
             # Store the URI in the state map if it's not already there or if it was just uploaded
             if chunk_path not in state.chunk_uri_map or state.chunk_uri_map[chunk_path] != video_file.uri:
-                 print(f"Updating state map: {chunk_path} -> {video_file.uri}")
-                 state.chunk_uri_map[chunk_path] = video_file.uri
+                print(f"Updating state map: {chunk_path} -> {video_file.uri}")
+                state.chunk_uri_map[chunk_path] = video_file.uri
+
+            # Get chunk duration (if available)
+            chunk_duration = 0
+            try:
+                # If ffprobe is available, use it to get duration
+                import subprocess
+
+                result = subprocess.run(
+                    [
+                        "ffprobe",
+                        "-v",
+                        "error",
+                        "-show_entries",
+                        "format=duration",
+                        "-of",
+                        "default=noprint_wrappers=1:nokey=1",
+                        chunk_path,
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+                chunk_duration = float(result.stdout.strip())
+                print(f"Chunk duration: {chunk_duration} seconds")
+            except Exception as dur_e:
+                print(f"Warning: Could not determine chunk duration: {dur_e}")
+                # Use file size as a fallback weight
+                try:
+                    chunk_duration = os.path.getsize(chunk_path)
+                    print(f"Using file size as weight: {chunk_duration} bytes")
+                except Exception:
+                    # Default to 1 if we can't get file size either
+                    chunk_duration = 1
+                    print("Using default weight: 1")
+
+            chunk_durations.append(chunk_duration)
 
             # Analyze with Gemini using the ACTIVE file
             print(f"Requesting analysis from Gemini for {video_file.uri}...")
             try:
                 analysis_text = _analyze_with_gemini(client, video_file)
                 print("Received analysis response from Gemini.")
-                # print(f"Raw analysis text:\n{analysis_text}") # Optional: Log raw response
             except Exception as analysis_e:
-                 print(f"Error during Gemini analysis for {video_file.uri}: {analysis_e}")
-                 # Decide how to handle: skip chunk, set error, etc.
-                 # For now, let's skip this chunk's result but continue with others
-                 continue
+                print(f"Error during Gemini analysis for {video_file.uri}: {analysis_e}")
+                # Skip this chunk's result but continue with others
+                continue
 
             # Parse the response
             print("Parsing analysis response...")
             analysis_data = _parse_analysis_result(analysis_text)
             print("Analysis response parsed successfully.")
             print("--- Parsed Gemini Analysis Data ---")
-            print(json.dumps(analysis_data, indent=2)) # Log the parsed data
+            print(json.dumps(analysis_data, indent=2))  # Log the parsed data
             print("-----------------------------------")
             all_results.append(analysis_data)
 
-            # Optionally delete the file from Gemini
-            # Note: We are NOT deleting the file from Gemini anymore,
-            # as we want to reuse the URI later.
             print(f"--- Finished processing chunk: {chunk_path} ---")
 
-        # Combine results (using first *successful* result for now)
+        # Combine results using weighted averaging
         print("Combining analysis results...")
         if all_results:
-            # TODO: Implement a more sophisticated result combination strategy
-            # For now, just use the first successful analysis we got.
-            print("Using analysis result from the first successfully analyzed chunk.")
-            result = all_results[0] # Assumes at least one chunk succeeded
+            # Use the aggregation function for weighted averaging
+            result = _aggregate_analysis_results(all_results, chunk_durations)
+            print("Results aggregated successfully.")
 
-            # Map video assessment to ContentAnalysis model
-            print("Mapping raw analysis data to ContentAnalysis model...")
+            # Map aggregated result to ContentAnalysis model
+            print("Mapping aggregated data to ContentAnalysis model...")
             content_analysis = _map_to_content_analysis(result)
             print("Mapping successful.")
 
