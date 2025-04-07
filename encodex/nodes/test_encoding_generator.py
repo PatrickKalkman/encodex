@@ -5,11 +5,14 @@ This node generates test encodings for selected video segments using different
 encoding parameters to evaluate quality vs. bitrate tradeoffs.
 """
 
+import logging
 import os
 import subprocess
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from encodex.graph_state import EncodExState, TestEncoding
+
+logger = logging.getLogger(__name__)
 
 
 def _run_ffmpeg_command(cmd: List[str]) -> Optional[str]:
@@ -23,10 +26,15 @@ def _run_ffmpeg_command(cmd: List[str]) -> Optional[str]:
         Error message if command failed, None otherwise
     """
     try:
-        result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        return result
+        # Run the command. check=True raises CalledProcessError on non-zero exit.
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # If successful, return None (indicating no error)
+        return None
     except subprocess.CalledProcessError as e:
-        return f"FFmpeg error: {e.stderr}"
+        # If failed, return the error message from stderr
+        error_message = f"FFmpeg error (Exit Code {e.returncode}): {e.stderr.strip()}"
+        logger.debug(error_message) # Log the detailed error at debug level
+        return error_message # Return the error string
 
 
 def _create_test_encoding(
@@ -45,6 +53,9 @@ def _create_test_encoding(
     Returns:
         TestEncoding object if successful, None if failed
     """
+    segment_id = f"{segment['start_time']:.2f}-{segment['end_time']:.2f}"
+    logger.info(f"Creating test encoding for segment {segment_id} at {resolution} {bitrate}k...")
+
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
 
@@ -52,9 +63,9 @@ def _create_test_encoding(
     width, height = resolution.split("x")
 
     # Generate output filename based on parameters
-    segment_id = f"{segment['start_time']:.2f}-{segment['end_time']:.2f}"
     output_filename = f"test_encoding_{segment_id}_{resolution}_{bitrate}k.mp4"
     output_path = os.path.join(output_dir, output_filename)
+    logger.debug(f"Output path: {output_path}")
 
     # Calculate maxrate and bufsize (standard practice)
     maxrate = int(bitrate * 1.5)
@@ -85,12 +96,15 @@ def _create_test_encoding(
         "-y",  # Overwrite existing files
         output_path,
     ]
+    logger.debug(f"Running FFmpeg command: {' '.join(cmd)}")
 
     # Run FFmpeg command
-    error = _run_ffmpeg_command(cmd)
-    if error:
-        print(f"Failed to create test encoding: {error}")
+    error_message = _run_ffmpeg_command(cmd)
+    if error_message: # Check if an error message string was returned
+        logger.error(f"Failed to create test encoding for segment {segment_id} ({resolution} {bitrate}k): {error_message}")
         return None
+    else:
+        logger.info(f"Successfully created test encoding: {output_path}")
 
     # Return TestEncoding object
     return TestEncoding(path=output_path, resolution=resolution, bitrate=bitrate, segment=segment_id)
@@ -106,12 +120,17 @@ def generate_test_encodings(state: EncodExState) -> EncodExState:
     Returns:
         Updated workflow state with test encodings
     """
+    logger.info("Starting test encoding generation...")
     if not state.selected_segments:
+        logger.warning("No segments selected for test encoding.")
         state.error = "No segments selected for test encoding"
         return state
 
+    logger.info(f"Found {len(state.selected_segments)} segments selected for encoding.")
+
     # Set up output directory for test encodings
     output_dir = os.path.join(os.path.dirname(state.input_file), "test_encodings")
+    logger.info(f"Output directory for test encodings: {output_dir}")
 
     # Initialize test encodings list
     state.test_encodings = []
@@ -153,12 +172,18 @@ def generate_test_encodings(state: EncodExState) -> EncodExState:
             "end_time": segment.end_time,
             "complexity": segment.complexity,
         }
+        segment_id = f"{segment.start_time:.2f}-{segment.end_time:.2f}"
+        logger.info(f"Processing segment {segment_id} with complexity: {segment.complexity}")
 
         # Get encoding parameters based on segment complexity
         # Default to Medium if complexity is not recognized
         complexity = segment.complexity
         if complexity not in encoding_params:
+            logger.warning(f"Complexity '{complexity}' not recognized for segment {segment_id}. Defaulting to 'Medium'.")
             complexity = "Medium"
+
+        params_to_use = encoding_params[complexity]
+        logger.debug(f"Using parameters for '{complexity}' complexity: {params_to_use}")
 
         # Generate test encodings for this segment
         for params in encoding_params[complexity]:
@@ -172,9 +197,15 @@ def generate_test_encodings(state: EncodExState) -> EncodExState:
 
             if encoding:
                 state.test_encodings.append(encoding)
+            else:
+                # Error already logged in _create_test_encoding
+                logger.warning(f"Skipping failed encoding for segment {segment_id} ({params['resolution']} {params['bitrate']}k)")
 
     # Check if we successfully created any test encodings
     if not state.test_encodings:
+        logger.error("Failed to create any test encodings.")
         state.error = "Failed to create any test encodings"
+    else:
+        logger.info(f"Successfully generated {len(state.test_encodings)} test encodings.")
 
     return state
