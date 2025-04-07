@@ -7,21 +7,6 @@ These will be implemented in future steps.
 from encodex.graph_state import ComplexityCategory, EncodExState, EncodingParameters
 
 
-def generate_test_encodings(state: EncodExState) -> EncodExState:
-    """
-    Generates test encodings for selected segments.
-    Placeholder implementation.
-    """
-    if not state.selected_segments:
-        state.error = "No segments selected for test encoding"
-        return state
-
-    # Placeholder implementation
-    state.test_encodings = []
-
-    return state
-
-
 def calculate_quality_metrics(state: EncodExState) -> EncodExState:
     """
     Calculates quality metrics for test encodings.
