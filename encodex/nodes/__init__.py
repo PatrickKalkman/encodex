@@ -1,8 +1,8 @@
-__version__ = "0.1.0"
-
 """
 Node implementations for the EncodEx LangGraph workflow.
 """
+
+__version__ = "0.1.0"
 
 # Import node functions to make them available at the package level
 from encodex.nodes.content_analyzer import analyze_content
