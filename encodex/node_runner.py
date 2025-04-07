@@ -92,7 +92,11 @@ def run_node(
                  print(f"Warning: Node '{node_name}' returned None. Assuming state was modified in-place.")
                  return call_args['state'] # Return the potentially modified input state
              else:
-                 raise TypeError(f"Node '{node_name}' did not return an EncodExState object. Returned: {type(updated_state)}")
+                 returned_type = type(updated_state)
+                 raise TypeError(
+                     f"Node '{node_name}' did not return an EncodExState object. "
+                     f"Returned: {returned_type}"
+                 )
         return updated_state
     except Exception as e:
         # Optionally wrap the exception or add more context

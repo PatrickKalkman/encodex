@@ -314,8 +314,9 @@ def main():
     legacy_parser = subparsers.add_parser("analyze", help="Analyze video with Gemini API directly")
     legacy_parser.add_argument("input", help="Path to video file or Gemini file URI")
 
-    list_parser = subparsers.add_parser("list-files", help="List files uploaded to Gemini API (Legacy)")
-    delete_parser = subparsers.add_parser("delete-files", help="Delete all files uploaded to Gemini API (Legacy)")
+    # Add parsers without assigning to unused variables
+    subparsers.add_parser("list-files", help="List files uploaded to Gemini API (Legacy)")
+    subparsers.add_parser("delete-files", help="Delete all files uploaded to Gemini API (Legacy)")
 
     # Parse arguments
     args = parser.parse_args()
