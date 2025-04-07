@@ -286,7 +286,7 @@ def analyze_content(state: EncodExState) -> EncodExState:
         if all_results:
             # TODO: Implement a more sophisticated result combination strategy
             # For now, just use the first successful analysis we got.
-            print(f"Using analysis result from the first successfully analyzed chunk.")
+            print("Using analysis result from the first successfully analyzed chunk.")
             result = all_results[0] # Assumes at least one chunk succeeded
 
             # Map to ContentAnalysis model
