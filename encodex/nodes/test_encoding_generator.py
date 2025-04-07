@@ -51,9 +51,10 @@ def _run_ffmpeg_command(cmd: List[str], duration_s: float) -> Optional[str]:
 
         # Simple parsing for 'out_time_us' (microseconds)
         match = re.search(r"out_time_us=(\d+)", line)
-        if match and total_duration_us:
+        # Ensure total_duration_us is valid (positive) before calculating progress
+        if match and total_duration_us and total_duration_us > 0:
             current_us = int(match.group(1))
-            progress = (current_us / total_duration_us) * 100
+            progress = min(100.0, (current_us / total_duration_us) * 100) # Cap at 100%
             # Print progress on the same line
             progress_line = f"\rProgress: {progress:.1f}%"
             print(progress_line, end="")
@@ -68,9 +69,13 @@ def _run_ffmpeg_command(cmd: List[str], duration_s: float) -> Optional[str]:
     # Wait for the process to finish and capture remaining output/errors
     stdout, stderr = process.communicate()
 
+    # Ensure the progress line is cleared after the loop finishes
+    print("\r" + " " * len(last_progress_line) + "\r", end="")
+    sys.stdout.flush()
+
     if process.returncode != 0:
         error_message = f"FFmpeg error (Exit Code {process.returncode}): {stderr.strip()}"
-        logger.debug(error_message) # Log the detailed error at debug level
+        logger.debug(error_message)  # Log the detailed error at debug level
         return error_message
     else:
         return None # Success
