@@ -47,9 +47,9 @@ Use the following format:
   "assessment": {
     "motion_intensity": {
       "score": 75,
-      "justification": "The video contains numerous high-action sequences including fights, explosions, magical effects, \
-and fast camera movements (establishing shots, chases). While there are some static logo screens and dialogue scenes, \
-the overall motion level is high."
+      "justification": "The video contains numerous high-action sequences including fights, explosions, magical \
+effects, and fast camera movements (establishing shots, chases). While there are some static logo screens and \
+dialogue scenes, the overall motion level is high."
     },
     "temporal_complexity": {
       "score": 80,
