@@ -29,6 +29,38 @@ target-version = "py311"
 # Line length matches black's default
 line-length = 120
 
+# Exclude files/directories from linting and formatting
+# (Includes Ruff's defaults + .gitignore)
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    ".gitignore",  # Add .gitignore here
+]
+
+
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
