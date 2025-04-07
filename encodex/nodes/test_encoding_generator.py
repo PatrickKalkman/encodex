@@ -100,8 +100,11 @@ def _create_test_encoding(
 
     # Run FFmpeg command
     error_message = _run_ffmpeg_command(cmd)
-    if error_message: # Check if an error message string was returned
-        logger.error(f"Failed to create test encoding for segment {segment_id} ({resolution} {bitrate}k): {error_message}")
+    if error_message:  # Check if an error message string was returned
+        logger.error(
+            f"Failed to create test encoding for segment {segment_id} "
+            f"({resolution} {bitrate}k): {error_message}"
+        )
         return None
     else:
         logger.info(f"Successfully created test encoding: {output_path}")
@@ -179,7 +182,10 @@ def generate_test_encodings(state: EncodExState) -> EncodExState:
         # Default to Medium if complexity is not recognized
         complexity = segment.complexity
         if complexity not in encoding_params:
-            logger.warning(f"Complexity '{complexity}' not recognized for segment {segment_id}. Defaulting to 'Medium'.")
+            logger.warning(
+                f"Complexity '{complexity}' not recognized for segment {segment_id}. "
+                f"Defaulting to 'Medium'."
+            )
             complexity = "Medium"
 
         params_to_use = encoding_params[complexity]
@@ -199,7 +205,10 @@ def generate_test_encodings(state: EncodExState) -> EncodExState:
                 state.test_encodings.append(encoding)
             else:
                 # Error already logged in _create_test_encoding
-                logger.warning(f"Skipping failed encoding for segment {segment_id} ({params['resolution']} {params['bitrate']}k)")
+                logger.warning(
+                    f"Skipping failed encoding for segment {segment_id} "
+                    f"({params['resolution']} {params['bitrate']}k)"
+                )
 
     # Check if we successfully created any test encodings
     if not state.test_encodings:
