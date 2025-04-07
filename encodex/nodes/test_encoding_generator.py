@@ -60,18 +60,17 @@ def _run_ffmpeg_command(cmd: List[str], duration_s: float) -> Optional[str]:
             print(progress_line, end="")
             last_progress_line = progress_line # Store last line to overwrite later
             sys.stdout.flush()  # Ensure it prints immediately
-        elif line.strip().startswith("progress="): # Handle end of progress stream
-             # Clear the progress line completely
-            print("\r" + " " * len(last_progress_line) + "\r", end="")
-            sys.stdout.flush()
+        # Removed explicit handling of 'progress=end' within the loop
 
 
     # Wait for the process to finish and capture remaining output/errors
     stdout, stderr = process.communicate()
 
-    # Ensure the progress line is cleared after the loop finishes
-    print("\r" + " " * len(last_progress_line) + "\r", end="")
+    # Clear the progress line after the process completes
+    # Use a sufficiently long string of spaces to ensure overwriting
+    print("\r" + " " * 80 + "\r", end="")
     sys.stdout.flush()
+    print() # Add a newline for subsequent logs
 
     if process.returncode != 0:
         error_message = f"FFmpeg error (Exit Code {process.returncode}): {stderr.strip()}"
@@ -149,8 +148,7 @@ def _create_test_encoding(
     error_message = _run_ffmpeg_command(cmd, segment_duration)
 
     if error_message:  # Check if an error message string was returned
-        # Ensure the progress line is cleared on error
-        print("\r" + " " * 50 + "\r", end="") # Clear potential leftover progress line
+        # Progress line clearing is now handled within _run_ffmpeg_command after communicate()
         logger.error(
             f"Failed to create test encoding for segment {segment_id} "
             f"({resolution} {bitrate}k): {error_message}"
