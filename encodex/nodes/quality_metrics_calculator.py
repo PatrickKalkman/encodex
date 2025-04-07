@@ -11,6 +11,7 @@ import os
 import subprocess
 import tempfile
 from typing import Dict, List, Optional, Tuple
+
 from encodex.graph_state import EncodExState, QualityMetric
 
 logger = logging.getLogger(__name__)
