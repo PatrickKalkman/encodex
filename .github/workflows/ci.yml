@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          # Install dependencies from uv.lock (including dev dependencies)
+          uv sync
+          # Install the current project in editable mode
+          uv pip install -e .
+
+      - name: Lint with ruff
+        # Lint the entire project directory
+        run: uv run ruff check .
+
+      - name: Run tests
+        # Run tests, assumes tests are in the 'tests/' directory
+        # This step might fail if no tests exist yet.
+        run: uv run pytest tests/
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install build dependencies
+        # Install dependencies from uv.lock, ensuring hatch and tomli are available
+        run: uv sync
+
+      - name: Build package
+        run: uv run hatch build
+
+      - name: Get package metadata
+        id: metadata
+        run: |
+          # Ensure tomli is installed via uv sync before running this
+          echo "pkg_name=$(uv run python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['name'])")" >> $GITHUB_OUTPUT
+          echo "version=$(uv run python -c "import tomli; print(tomli.load(open('pyproject.toml', 'rb'))['project']['version'])")" >> $GITHUB_OUTPUT
+
+      - name: Store build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.metadata.outputs.pkg_name }}-${{ steps.metadata.outputs.version }}
+          path: dist/
+          retention-days: 5
