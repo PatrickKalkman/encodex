@@ -6,16 +6,16 @@ import json
 import os
 import re
 import time
-from typing import Any, Dict, List, Optional # Added List
+from typing import Any, Dict, List, Optional  # Added List
 
 from google import genai
 
-from encodex.graph_state import ( # Grouped imports
+from encodex.graph_state import (  # Grouped imports
     AnimationType,
     ContentAnalysis,
     ContentCharacteristic,
     EncodExState,
-    Segment, # Added Segment
+    Segment,  # Added Segment
 )
 
 # Regex to check if the input looks like a Gemini File API URI (e.g., "files/...")
