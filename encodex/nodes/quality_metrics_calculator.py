@@ -142,7 +142,7 @@ def _extract_segment_time_range(segment_id: str) -> Tuple[float, float]:
         start_time = float(parts[0])
         end_time = float(parts[1])
         duration = end_time - start_time
-        logger.debug("Extracted time range from segment ID '%s': start=%.3f, duration=%.3f", segment_id, start_time, duration)
+        logger.debug("Parsed segment '%s': start=%.3f, duration=%.3f", segment_id, start_time, duration)
         return start_time, duration
     except (IndexError, ValueError, TypeError) as e:
         logger.error("Error parsing segment ID '%s': %s", segment_id, e)
@@ -209,7 +209,7 @@ def calculate_quality_metrics(state: EncodExState) -> EncodExState:
 
         # Skip if metrics calculation failed or returned None
         if metrics is None:
-            logger.warning("Skipping quality metrics for encoding %s due to calculation failure or invalid result.", encoding.path)
+            logger.warning("Skipping metrics for %s: calculation failed or invalid result.", encoding.path)
             continue
 
         # Create quality metric object
