@@ -1,0 +1,62 @@
+╰─ uv run encodex files/93xzv5szwicb
+Using existing file URI: files/93xzv5szwicb
+Found file: files/93xzv5szwicb (State: ACTIVE)
+Video file is active and ready for analysis.
+Generating analysis using model: gemini-2.5-pro-preview-03-25...
+
+Analysis Result:
+```json
+{
+    "video_assessment": {
+        "motion_intensity": {
+            "score": 95,
+            "justification": "Extremely high amount of fast-paced motion throughout, including flying characters, vehicles, rapid fight choreography, large-scale destruction, and significant camera movement (fast pans, tracking shots, aerials, shaky cam)."
+        },
+        "temporal_complexity": {
+            "score": 98,
+            "justification": "Very high due to constant action, extremely frequent cuts (trailer style), numerous explosions, particle effects (energy blasts, magic, electricity, water spray), character transformations/size changes, and rapid object interactions/destruction."
+        },
+        "spatial_complexity": {
+            "score": 85,
+            "justification": "Generally high spatial detail. Features intricate costumes (Black Adam suit texture, JSA armor), detailed CGI characters (Sabbac) and vehicles, complex backgrounds (cityscapes, debris-filled rooms, landscapes), although some dark/hazy scenes slightly obscure detail."
+        },
+        "scene_change_frequency": {
+            "score": 95,
+            "justification": "Very high frequency of hard cuts, typical of an action-packed trailer or montage, transitioning rapidly between different locations, characters, and action beats, challenging inter-frame prediction."
+        },
+        "texture_detail_prevalence": {
+            "score": 80,
+            "justification": "High prevalence of detailed textures. Visible on superhero costumes (armor, fabric weaves, metallic sheens), facial close-ups, environmental surfaces (rock, debris, futuristic tech), and the intricate design of props like helmets and crowns."
+        },
+        "contrast_levels": {
+            "score": 75,
+            "justification": "Predominantly high contrast, with bright energy effects, explosions, and daylight scenes juxtaposed against dark costumes, shadows, and night/dimly lit interiors. Wide dynamic range is frequently utilized."
+        },
+        "animation_type": {
+            "type": "Live-action with extensive CGI/VFX",
+            "justification": "The base footage is live-action, but there is heavy reliance on computer-generated imagery for characters' powers, flight, costumes/armor, vehicles, large-scale environments, and destruction effects."
+        },
+        "grain_noise_levels": {
+            "score": 15,
+            "justification": "Appears digitally shot with low native noise. No significant film grain is apparent, resulting in a clean image profile typical of modern VFX-heavy blockbusters, which is generally good for compression."
+        }
+    },
+    "representative_segments": [
+        {
+            "complexity": "High",
+            "timestamp_range": "17:18 - 19:28",
+            "description": "Climax fight sequence involving Sabbac transformation, multiple characters using powers (lightning, size change, magic), high-speed action, explosions, and destruction. Extreme motion and temporal complexity, high spatial detail."
+        },
+        {
+            "complexity": "Medium",
+            "timestamp_range": "11:50 - 12:12",
+            "description": "Scene inside the futuristic Hawk Cruiser cockpit. Characters interact around a holographic display table. Moderate character motion, dynamic display changes, high spatial detail in the set and displays, dialogue-driven."
+        },
+        {
+            "complexity": "Low",
+            "timestamp_range": "05:46 - 06:10",
+            "description": "Dialogue scene between Black Adam and Doctor Fate in a lush, mountainous landscape. Minimal motion, mostly static camera shots, high spatial detail in the environment and costumes, low temporal complexity."
+        }
+    ]
+}
+```
