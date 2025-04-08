@@ -13,7 +13,7 @@ import subprocess
 import sys  # Add sys import for stdout flushing
 from typing import List, Optional
 
-from encodex.graph_state import EncodExState, TestEncoding
+from encodex.graph_state import EnCodexState, TestEncoding
 
 logger = logging.getLogger(__name__)
 
@@ -55,14 +55,13 @@ def _run_ffmpeg_command(cmd: List[str], duration_s: float) -> Optional[str]:
         # Ensure total_duration_us is valid (positive) before calculating progress
         if match and total_duration_us and total_duration_us > 0:
             current_us = int(match.group(1))
-            progress = min(100.0, (current_us / total_duration_us) * 100) # Cap at 100%
+            progress = min(100.0, (current_us / total_duration_us) * 100)  # Cap at 100%
             # Print progress on the same line
             progress_line = f"\rProgress: {progress:.1f}%"
             print(progress_line, end="")
             # last_progress_line = progress_line # No longer needed for clearing
             sys.stdout.flush()  # Ensure it prints immediately
         # Removed explicit handling of 'progress=end' within the loop
-
 
     # Wait for the process to finish and capture remaining output/errors
     stdout, stderr = process.communicate()
@@ -71,17 +70,17 @@ def _run_ffmpeg_command(cmd: List[str], duration_s: float) -> Optional[str]:
     # Use a sufficiently long string of spaces to ensure overwriting
     print("\r" + " " * 80 + "\r", end="")
     sys.stdout.flush()
-    print() # Add a newline for subsequent logs
+    print()  # Add a newline for subsequent logs
 
     if process.returncode != 0:
         error_message = f"FFmpeg error (Exit Code {process.returncode}): {stderr.strip()}"
         logger.debug(error_message)  # Log the detailed error at debug level
         return error_message
     else:
-        return None # Success
+        return None  # Success
 
 
-def _create_test_encoding( # noqa: PLR0913 Too many arguments
+def _create_test_encoding(  # noqa: PLR0913 Too many arguments
     input_file: str,
     segment: dict,
     resolution: str,
@@ -126,10 +125,14 @@ def _create_test_encoding( # noqa: PLR0913 Too many arguments
     # Base FFmpeg command parts
     base_cmd = [
         "ffmpeg",
-        "-progress", "pipe:1",
-        "-i", input_file,
-        "-ss", str(segment["start_time"]),
-        "-to", str(segment["end_time"]),
+        "-progress",
+        "pipe:1",
+        "-i",
+        input_file,
+        "-ss",
+        str(segment["start_time"]),
+        "-to",
+        str(segment["end_time"]),
     ]
 
     # Video codec specific parts
@@ -137,31 +140,40 @@ def _create_test_encoding( # noqa: PLR0913 Too many arguments
     if use_gpu and platform.system() == "Darwin":
         logger.info("Attempting to use hardware encoder (h264_videotoolbox)...")
         encoder_cmd = [
-            "-c:v", "h264_videotoolbox",
-            "-allow_sw", "1", # Enable software fallback
-            "-b:v", f"{bitrate}k",
-            "-maxrate", f"{maxrate}k", # Maxrate is supported
+            "-c:v",
+            "h264_videotoolbox",
+            "-allow_sw",
+            "1",  # Enable software fallback
+            "-b:v",
+            f"{bitrate}k",
+            "-maxrate",
+            f"{maxrate}k",  # Maxrate is supported
             # Bufsize might not be directly applicable or behave differently
             # Preset is not applicable
         ]
     else:
         if use_gpu and platform.system() != "Darwin":
             logger.warning(
-                "GPU acceleration requested, but only macOS VideoToolbox is currently supported. "
-                "Falling back to CPU."
+                "GPU acceleration requested, but only macOS VideoToolbox is currently supported. Falling back to CPU."
             )
         logger.info("Using CPU encoder (libx264)...")
         encoder_cmd = [
-            "-c:v", "libx264",
-            "-b:v", f"{bitrate}k",
-            "-maxrate", f"{maxrate}k",
-            "-bufsize", f"{bufsize}k",
-            "-preset", "slow", # Higher quality encoding for tests
+            "-c:v",
+            "libx264",
+            "-b:v",
+            f"{bitrate}k",
+            "-maxrate",
+            f"{maxrate}k",
+            "-bufsize",
+            f"{bufsize}k",
+            "-preset",
+            "slow",  # Higher quality encoding for tests
         ]
 
     # Scaling and output parts
     output_cmd = [
-        "-vf", f"scale={width}:{height}",
+        "-vf",
+        f"scale={width}:{height}",
         "-an",  # No audio needed for test segments
         "-y",  # Overwrite existing files
         output_path,
@@ -176,8 +188,7 @@ def _create_test_encoding( # noqa: PLR0913 Too many arguments
     if error_message:  # Check if an error message string was returned
         # Progress line clearing is now handled within _run_ffmpeg_command after communicate()
         logger.error(
-            f"Failed to create test encoding for segment {segment_id} "
-            f"({resolution} {bitrate}k): {error_message}"
+            f"Failed to create test encoding for segment {segment_id} ({resolution} {bitrate}k): {error_message}"
         )
         return None
     else:
@@ -187,7 +198,7 @@ def _create_test_encoding( # noqa: PLR0913 Too many arguments
     return TestEncoding(path=output_path, resolution=resolution, bitrate=bitrate, segment=segment_id)
 
 
-def generate_test_encodings(state: EncodExState, use_gpu: bool = False) -> EncodExState:
+def generate_test_encodings(state: EnCodexState, use_gpu: bool = False) -> EnCodexState:
     """
     Generates test encodings for selected segments.
 
@@ -259,8 +270,7 @@ def generate_test_encodings(state: EncodExState, use_gpu: bool = False) -> Encod
         complexity = segment.complexity
         if complexity not in encoding_params:
             logger.warning(
-                f"Complexity '{complexity}' not recognized for segment {segment_id}. "
-                f"Defaulting to 'Medium'."
+                f"Complexity '{complexity}' not recognized for segment {segment_id}. Defaulting to 'Medium'."
             )
             complexity = "Medium"
 
@@ -275,7 +285,7 @@ def generate_test_encodings(state: EncodExState, use_gpu: bool = False) -> Encod
                 resolution=params["resolution"],
                 bitrate=params["bitrate"],
                 output_dir=output_dir,
-                use_gpu=use_gpu, # Pass the flag down
+                use_gpu=use_gpu,  # Pass the flag down
             )
 
             if encoding:
@@ -283,8 +293,7 @@ def generate_test_encodings(state: EncodExState, use_gpu: bool = False) -> Encod
             else:
                 # Error already logged in _create_test_encoding
                 logger.warning(
-                    f"Skipping failed encoding for segment {segment_id} "
-                    f"({params['resolution']} {params['bitrate']}k)"
+                    f"Skipping failed encoding for segment {segment_id} ({params['resolution']} {params['bitrate']}k)"
                 )
 
     # Check if we successfully created any test encodings

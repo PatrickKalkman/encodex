@@ -91,22 +91,20 @@ class EncodingParameters(BaseModel):
     profile: str
 
 
-class EncodExState(BaseModel):
+class EnCodexState(BaseModel):
     """Complete state for the EncodEx workflow."""
 
     input_file: str
     video_metadata: Optional[VideoMetadata] = None
     low_res_path: Optional[str] = None
-    chunk_paths: List[str] = Field(default_factory=list) # Added default
-    # Add this new field:
-    chunk_start_times: Dict[str, float] = Field(default_factory=dict) # Maps chunk path to its start time in seconds
-    # Map local chunk paths to Gemini File API URIs
-    chunk_uri_map: Optional[Dict[str, str]] = Field(default_factory=dict) # Ensure this is initialized
+    chunk_paths: List[str] = Field(default_factory=list)
+    chunk_start_times: Dict[str, float] = Field(default_factory=dict)
+    chunk_uri_map: Optional[Dict[str, str]] = Field(default_factory=dict)
     content_analysis: Optional[ContentAnalysis] = None
-    selected_segments: List[Segment] = Field(default_factory=list) # Added default
-    test_encodings: List[TestEncoding] = Field(default_factory=list) # Added default
-    quality_metrics: List[QualityMetric] = Field(default_factory=list) # Added default
+    selected_segments: List[Segment] = Field(default_factory=list)
+    test_encodings: List[TestEncoding] = Field(default_factory=list)
+    quality_metrics: List[QualityMetric] = Field(default_factory=list)
     complexity_category: Optional[ComplexityCategory] = None
-    encoding_ladder: List[EncodingParameters] = Field(default_factory=list) # Added default
+    encoding_ladder: List[EncodingParameters] = Field(default_factory=list)
     estimated_savings: Optional[str] = None
     error: Optional[str] = None

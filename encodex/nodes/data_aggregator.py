@@ -8,7 +8,7 @@ overall complexity category and prepare data for recommendation generation.
 import logging
 from typing import Dict, List, Tuple
 
-from encodex.graph_state import ComplexityCategory, EncodExState, QualityMetric
+from encodex.graph_state import ComplexityCategory, EnCodexState, QualityMetric
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -132,7 +132,7 @@ def _determine_complexity_category(
     return category, weighted_score
 
 
-def aggregate_data(state: EncodExState) -> EncodExState:
+def aggregate_data(state: EnCodexState) -> EnCodexState:
     """
     Aggregates content analysis and quality metrics data.
 

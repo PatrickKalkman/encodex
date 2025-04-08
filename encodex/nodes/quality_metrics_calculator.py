@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 from typing import Dict, List, Optional, Tuple
 
-from encodex.graph_state import EncodExState, QualityMetric
+from encodex.graph_state import EnCodexState, QualityMetric
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -190,7 +190,7 @@ def _extract_segment_time_range(segment_id: str) -> Tuple[float, float]:
         return 0.0, 0.0
 
 
-def calculate_quality_metrics(state: EncodExState) -> EncodExState:
+def calculate_quality_metrics(state: EnCodexState) -> EnCodexState:
     """
     Calculates quality metrics for test encodings.
 

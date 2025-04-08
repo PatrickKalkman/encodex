@@ -6,10 +6,10 @@ import json
 import os
 import subprocess
 
-from encodex.graph_state import EncodExState, VideoMetadata
+from encodex.graph_state import EnCodexState, VideoMetadata
 
 
-def process_input(state: EncodExState) -> EncodExState:
+def process_input(state: EnCodexState) -> EnCodexState:
     """
     Process the input video file:
     - Validate that it exists and is a supported format

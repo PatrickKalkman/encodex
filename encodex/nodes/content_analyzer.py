@@ -14,7 +14,7 @@ from encodex.graph_state import (  # Grouped imports
     AnimationType,
     ContentAnalysis,
     ContentCharacteristic,
-    EncodExState,
+    EnCodexState,
     Segment,  # Added Segment
 )
 
@@ -450,7 +450,7 @@ def _map_to_content_analysis(analysis_data: Dict[str, Any]) -> ContentAnalysis:
     )
 
 
-def analyze_content(state: EncodExState) -> EncodExState:
+def analyze_content(state: EnCodexState) -> EnCodexState:
     """
     Analyze video content using Google Gemini API.
 

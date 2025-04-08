@@ -9,10 +9,10 @@ import re  # Add re import for parsing progress
 import subprocess
 import sys  # Add sys import for stdout flushing
 
-from encodex.graph_state import EncodExState
+from encodex.graph_state import EnCodexState
 
 
-def create_low_res_preview(state: EncodExState, use_gpu: bool = False) -> EncodExState:
+def create_low_res_preview(state: EnCodexState, use_gpu: bool = False) -> EnCodexState:
     """
     Create a low-resolution preview of the input video for analysis:
     - Generate a 240p low-bitrate version of the video

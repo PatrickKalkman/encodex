@@ -8,15 +8,15 @@ import os
 from typing import Any, Dict, Optional
 
 from encodex.graph import get_node_function
-from encodex.graph_state import EncodExState
+from encodex.graph_state import EnCodexState
 
 
 def run_node(
     node_name: str,
-    input_state: Optional[EncodExState] = None,
+    input_state: Optional[EnCodexState] = None,
     input_file: Optional[str] = None,
     **kwargs: Any,  # Accept arbitrary keyword arguments
-) -> EncodExState:
+) -> EnCodexState:
     """
     Run a single node with a given state and optional node-specific arguments.
 
@@ -46,7 +46,7 @@ def run_node(
             raise ValueError(f"Input file does not exist: {input_file}")
 
         # Create initial state with input file
-        current_state = EncodExState(input_file=input_file)
+        current_state = EnCodexState(input_file=input_file)
     else:
         current_state = input_state
 
@@ -61,12 +61,12 @@ def run_node(
     first_param_name = next(iter(node_params))
     if "state" in node_params:
         call_args["state"] = current_state
-    elif node_params[first_param_name].annotation == EncodExState:
+    elif node_params[first_param_name].annotation == EnCodexState:
         call_args[first_param_name] = current_state
     else:
         # This case should ideally not happen if nodes follow the convention (state) -> state
         # Or if they type hint the state parameter correctly
-        print(f"Warning: Node function {node_name} does not seem to accept 'state: EncodExState' argument correctly.")
+        print(f"Warning: Node function {node_name} does not seem to accept 'state: EnCodexState' argument correctly.")
         # Fallback: pass state as the first argument anyway
         call_args[first_param_name] = current_state
 
@@ -84,14 +84,14 @@ def run_node(
     try:
         updated_state = node_func(**call_args)
         # Ensure the node returned a state object
-        if not isinstance(updated_state, EncodExState):
+        if not isinstance(updated_state, EnCodexState):
             # If a node modifies state in-place and returns None, handle it
             if updated_state is None and "state" in call_args:
                 print(f"Warning: Node '{node_name}' returned None. Assuming state was modified in-place.")
                 return call_args["state"]  # Return the potentially modified input state
             else:
                 returned_type = type(updated_state)
-                raise TypeError(f"Node '{node_name}' did not return an EncodExState object. Returned: {returned_type}")
+                raise TypeError(f"Node '{node_name}' did not return an EnCodexState object. Returned: {returned_type}")
         return updated_state
     except Exception as e:
         # Optionally wrap the exception or add more context
@@ -101,7 +101,7 @@ def run_node(
         return current_state
 
 
-def load_state_from_json(json_path: str) -> EncodExState:
+def load_state_from_json(json_path: str) -> EnCodexState:
     """
     Load state from a JSON file.
 
@@ -117,10 +117,10 @@ def load_state_from_json(json_path: str) -> EncodExState:
     with open(json_path, "r") as f:
         state_dict = json.load(f)
 
-    return EncodExState.model_validate(state_dict)
+    return EnCodexState.model_validate(state_dict)
 
 
-def save_state_to_json(state: EncodExState, output_path: str) -> None:
+def save_state_to_json(state: EnCodexState, output_path: str) -> None:
     """
     Save state to a JSON file.
 

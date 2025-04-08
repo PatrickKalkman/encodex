@@ -9,7 +9,7 @@ import sys
 import time
 
 from encodex.graph import create_graph
-from encodex.graph_state import EncodExState
+from encodex.graph_state import EnCodexState
 from encodex.node_runner import load_state_from_json, run_node, save_state_to_json
 
 
@@ -92,11 +92,11 @@ def run_full_workflow(args):
     """
     input_file = args.input
     output_path = args.output
-    use_gpu = args.use_gpu # Extract use_gpu flag from args
+    use_gpu = args.use_gpu  # Extract use_gpu flag from args
 
     try:
         # Create initial state
-        initial_state = EncodExState(input_file=input_file)
+        initial_state = EnCodexState(input_file=input_file)
 
         # Create and run the workflow
         # Pass use_gpu flag to graph creation
@@ -106,12 +106,12 @@ def run_full_workflow(args):
         # Invoke the workflow with the state dictionary directly
         final_state_dict = workflow.invoke(initial_state_dict)
 
-        # Re-validate the final state dictionary back into an EncodExState object
-        final_state_obj = EncodExState(**final_state_dict) if isinstance(final_state_dict, dict) else None
+        # Re-validate the final state dictionary back into an EnCodexState object
+        final_state_obj = EnCodexState(**final_state_dict) if isinstance(final_state_dict, dict) else None
 
         # Check for errors in the final state
-        if not final_state_obj or not isinstance(final_state_obj, EncodExState):
-            print(f"Workflow did not return a valid EncodExState object. Output: {final_state_dict}", file=sys.stderr)
+        if not final_state_obj or not isinstance(final_state_obj, EnCodexState):
+            print(f"Workflow did not return a valid EnCodexState object. Output: {final_state_dict}", file=sys.stderr)
             sys.exit(1)
 
         if final_state_obj.error:
@@ -293,14 +293,12 @@ def analyze_video_directly(input_source):
 def main():
     """Main entry point for the CLI."""
     # Configure logging
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    logger = logging.getLogger(__name__) # Get logger for this module if needed
-    logger.info("EncodEx CLI started.")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logger = logging.getLogger(__name__)  # Get logger for this module if needed
+    logger.info("EnCodex CLI started.")
 
     parser = argparse.ArgumentParser(
-        description="EncodEx - AI-Driven Video Encoding Optimization System",
+        description="EnCodex - AI-Driven Video Encoding Optimization System",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -325,6 +323,11 @@ def main():
     workflow_parser = subparsers.add_parser("workflow", help="Run the complete workflow")
     workflow_parser.add_argument("--input", "-i", required=True, help="Path to input video file")
     workflow_parser.add_argument("--output", "-o", help="Path to output JSON file")
+    workflow_parser.add_argument(
+        "--use-gpu",
+        action="store_true",  # Makes it a boolean flag
+        help="Attempt to use GPU for encoding (if applicable to the node, e.g., low_res_encoder)",
+    )
 
     # Legacy commands for backward compatibility
     legacy_parser = subparsers.add_parser("analyze", help="Analyze video with Gemini API directly")

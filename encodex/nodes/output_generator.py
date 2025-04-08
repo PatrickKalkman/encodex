@@ -9,13 +9,13 @@ import logging
 import os
 from typing import Any, Dict
 
-from encodex.graph_state import EncodExState
+from encodex.graph_state import EnCodexState
 
 # Set up logger
 logger = logging.getLogger(__name__)
 
 
-def _create_output_json(state: EncodExState) -> Dict[str, Any]:
+def _create_output_json(state: EnCodexState) -> Dict[str, Any]:
     """
     Create the final JSON output structure.
 
@@ -65,7 +65,7 @@ def _create_output_json(state: EncodExState) -> Dict[str, Any]:
     return output
 
 
-def generate_output(state: EncodExState) -> EncodExState:
+def generate_output(state: EnCodexState) -> EnCodexState:
     """
     Generates the final output with encoding recommendations.
 

@@ -6,7 +6,7 @@ import functools
 
 from langgraph.graph import StateGraph
 
-from encodex.graph_state import EncodExState
+from encodex.graph_state import EnCodexState
 from encodex.nodes.content_analyzer import analyze_content
 from encodex.nodes.data_aggregator import aggregate_data
 from encodex.nodes.input_processor import process_input
@@ -25,8 +25,8 @@ def create_graph(use_gpu: bool = False):
     Args:
         use_gpu: Whether to attempt using GPU for relevant nodes.
     """
-    # Define the graph with the EncodExState as the state type
-    workflow = StateGraph(EncodExState)
+    # Define the graph with the EnCodexState as the state type
+    workflow = StateGraph(EnCodexState)
 
     # Prepare node functions, potentially binding the use_gpu argument
     low_res_encoder_node = functools.partial(create_low_res_preview, use_gpu=use_gpu)

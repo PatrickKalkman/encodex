@@ -6,10 +6,10 @@ import json
 import os
 import subprocess
 
-from encodex.graph_state import EncodExState
+from encodex.graph_state import EnCodexState
 
 
-def split_video(state: EncodExState) -> EncodExState:
+def split_video(state: EnCodexState) -> EnCodexState:
     """
     Split a video into smaller chunks for Gemini processing.
 
@@ -70,10 +70,10 @@ def split_video(state: EncodExState) -> EncodExState:
         # Create chunks
         chunks = []
         # Initialize the dictionary in the state
-        state.chunk_start_times = {} # Ensure it's empty before starting
+        state.chunk_start_times = {}  # Ensure it's empty before starting
 
         for i in range(num_chunks):
-            start_time = i * chunk_duration # This is the offset we need
+            start_time = i * chunk_duration  # This is the offset we need
             output_path = os.path.join(base_path, f"{name}_{i + 1:03d}{ext}")
 
             cmd = [
@@ -90,7 +90,7 @@ def split_video(state: EncodExState) -> EncodExState:
                 output_path,
             ]
 
-            print(f"Creating chunk {i + 1}/{num_chunks}: {output_path} (starts at {start_time:.2f}s)") # Log start time
+            print(f"Creating chunk {i + 1}/{num_chunks}: {output_path} (starts at {start_time:.2f}s)")  # Log start time
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             if result.returncode != 0:

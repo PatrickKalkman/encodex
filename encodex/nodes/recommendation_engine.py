@@ -8,7 +8,7 @@ optimal encoding parameters based on content complexity.
 import logging
 from typing import Dict, List, Tuple
 
-from encodex.graph_state import ComplexityCategory, EncodExState, EncodingParameters, QualityMetric
+from encodex.graph_state import ComplexityCategory, EnCodexState, EncodingParameters, QualityMetric
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -186,7 +186,7 @@ def _calculate_estimated_savings(encoding_ladder: List[EncodingParameters], comp
         return "15%"  # Default to moderate savings
 
 
-def generate_recommendations(state: EncodExState) -> EncodExState:
+def generate_recommendations(state: EnCodexState) -> EnCodexState:
     """
     Generates encoding parameter recommendations based on content analysis
     and quality metrics using convex hull optimization.
