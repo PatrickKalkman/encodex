@@ -6,10 +6,12 @@ from langgraph.graph import StateGraph
 
 from encodex.graph_state import EncodExState
 from encodex.nodes.content_analyzer import analyze_content
+from encodex.nodes.data_aggregator import aggregate_data
 from encodex.nodes.input_processor import process_input
 from encodex.nodes.low_res_encoder import create_low_res_preview
-from encodex.nodes.placeholder_nodes import aggregate_data, generate_output, generate_recommendations
+from encodex.nodes.output_generator import generate_output
 from encodex.nodes.quality_metrics_calculator import calculate_quality_metrics
+from encodex.nodes.recommendation_engine import generate_recommendations
 from encodex.nodes.test_encoding_generator import generate_test_encodings
 from encodex.nodes.video_splitter import split_video
 
