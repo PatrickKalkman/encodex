@@ -2,6 +2,8 @@
 LangGraph setup for the EncodEx workflow.
 """
 
+import functools
+
 from langgraph.graph import StateGraph
 
 from encodex.graph_state import EncodExState
@@ -16,17 +18,26 @@ from encodex.nodes.test_encoding_generator import generate_test_encodings
 from encodex.nodes.video_splitter import split_video
 
 
-def create_graph():
-    """Create the EncodEx workflow graph."""
+def create_graph(use_gpu: bool = False):
+    """
+    Create the EncodEx workflow graph.
+
+    Args:
+        use_gpu: Whether to attempt using GPU for relevant nodes.
+    """
     # Define the graph with the EncodExState as the state type
     workflow = StateGraph(EncodExState)
 
+    # Prepare node functions, potentially binding the use_gpu argument
+    low_res_encoder_node = functools.partial(create_low_res_preview, use_gpu=use_gpu)
+    test_encoding_generator_node = functools.partial(generate_test_encodings, use_gpu=use_gpu)
+
     # Add all nodes to the graph
     workflow.add_node("input_processor", process_input)
-    workflow.add_node("low_res_encoder", create_low_res_preview)
+    workflow.add_node("low_res_encoder", low_res_encoder_node)
     workflow.add_node("video_splitter", split_video)
     workflow.add_node("content_analyzer", analyze_content)
-    workflow.add_node("test_encoding_generator", generate_test_encodings)
+    workflow.add_node("test_encoding_generator", test_encoding_generator_node)
     workflow.add_node("quality_metrics_calculator", calculate_quality_metrics)
     workflow.add_node("data_aggregator", aggregate_data)
     workflow.add_node("recommendation_engine", generate_recommendations)
