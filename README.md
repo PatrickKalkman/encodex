@@ -1,29 +1,31 @@
-# EncodEx: AI-Driven Video Encoding Optimization System
+# EnCodex 🎬
 
-EncodEx is a system that uses AI to analyze video content and generate optimized encoding parameters based on content complexity. It leverages Google's Gemini 2.5 Pro for video content analysis and implements a LangGraph-based workflow for step-by-step processing.
+> _AI-Driven Video Encoding Optimization System_
+
+EnCodex uses AI to analyze video content and generate optimized encoding parameters based on content complexity. It leverages Google's Gemini 2.5 Pro for video content analysis and implements a LangGraph-based workflow for step-by-step processing with convex hull optimization for encoding ladders.
 
 ## Features
 
-- Analyzes video content characteristics using Google Gemini 2.5 Pro
-- Extracts metadata and creates low-resolution previews
-- Selects representative segments for encoding tests
-- Generates and evaluates test encodings with quality metrics
-- Recommends optimal encoding parameters based on content complexity
-- Provides estimated storage savings compared to standard encoding ladders
+- 🧠 **AI Content Analysis**: Analyzes video content characteristics using Google Gemini 2.5 Pro
+- 📊 **Convex Hull Optimization**: Uses the Pareto frontier approach to find optimal bitrate-quality tradeoffs
+- 📼 **Per-Content Encoding**: Adjusts encoding parameters based on content complexity
+- 📉 **Storage Optimization**: Provides estimated storage savings compared to standard encoding ladders
+- 🔍 **Content-Aware Segments**: Selects representative segments for targeted encoding tests
+- 📈 **Quality Metrics**: Evaluates encodings using VMAF and PSNR metrics
 
 ## Installation
 
 ### Prerequisites
 
 - Python 3.11 or higher
-- FFmpeg installed and available in your PATH
+- FFmpeg installed and available in your PATH (with VMAF support)
 - Google Gemini API key
 
 ### Install from source
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/encodex.git
+git clone https://github.com/PatrickKalkman/encodex.git
 cd encodex
 
 # Install using pip
@@ -40,9 +42,9 @@ export GEMINI_API_KEY=your_api_key_here
 
 ## Usage
 
-### Running the Workflow
+### Running the Complete Workflow
 
-To run the complete workflow:
+To run the end-to-end encoding optimization process:
 
 ```bash
 encodex workflow --input path/to/video.mp4 --output results.json
@@ -50,17 +52,29 @@ encodex workflow --input path/to/video.mp4 --output results.json
 
 ### Testing Individual Nodes
 
-You can test individual nodes in the workflow:
+You can run and test individual components of the workflow:
 
 ```bash
 # Process input and extract metadata
 encodex node input_processor --input path/to/video.mp4 --output state1.json
 
 # Create low-resolution preview
-encodex node low_res_encoder --state state1.json --output state2.json
+encodex node low_res_encoder --state state1.json --output state2.json --use-gpu
 
 # Analyze content with Gemini
 encodex node content_analyzer --state state2.json --output state3.json
+
+# Generate test encodings
+encodex node test_encoding_generator --state state3.json --output state4.json
+
+# Calculate quality metrics
+encodex node quality_metrics_calculator --state state4.json --output state5.json
+
+# Aggregate data and determine complexity
+encodex node data_aggregator --state state5.json --output state6.json
+
+# Generate encoding recommendations
+encodex node recommendation_engine --state state6.json --output state7.json
 ```
 
 ### Legacy Commands
@@ -78,6 +92,17 @@ encodex list-files
 encodex delete-files
 ```
 
+## How It Works
+
+EnCodex uses a multi-step approach to optimize video encoding:
+
+1. **Content Analysis**: Videos are analyzed by Google's Gemini 2.5 Pro to identify motion, complexity, and scene characteristics
+2. **Test Encodings**: Selected segments are encoded at various resolutions and bitrates
+3. **Quality Assessment**: VMAF and PSNR metrics are calculated for each test encoding
+4. **Convex Hull Optimization**: The Pareto frontier of quality-bitrate points is calculated to identify optimal encoding parameters
+5. **Content-Aware Adjustments**: Encoding parameters are adjusted based on overall content complexity
+6. **Encoding Ladder Generation**: A complete encoding ladder is generated with optimal resolution and bitrate pairs
+
 ## Project Structure
 
 ```
@@ -91,24 +116,36 @@ encodex/
     ├── __init__.py
     ├── input_processor.py
     ├── low_res_encoder.py
+    ├── video_splitter.py
     ├── content_analyzer.py
-    ├── segment_selector.py
-    └── placeholder_nodes.py
+    ├── test_encoding_generator.py
+    ├── quality_metrics_calculator.py
+    ├── data_aggregator.py
+    ├── recommendation_engine.py
+    └── output_generator.py
 ```
 
 ## Development Status
 
-This project is under active development. Currently implemented nodes:
+All main components have been implemented:
 
 - [x] InputProcessor - Validates and extracts metadata from input video
 - [x] LowResEncoder - Creates a low-resolution preview for analysis
+- [x] VideoSplitter - Splits videos for Gemini processing
 - [x] ContentAnalyzer - Uses Google Gemini to analyze content characteristics
-- [x] SegmentSelector - Identifies representative segments (basic implementation)
-- [ ] TestEncodingGenerator - Creates test encodings (placeholder)
-- [ ] QualityMetricsCalculator - Calculates quality metrics (placeholder)
-- [ ] DataAggregator - Combines metrics and analysis (placeholder)
-- [ ] RecommendationEngine - Generates encoding recommendations (placeholder)
-- [ ] OutputGenerator - Creates final output report (placeholder)
+- [x] TestEncodingGenerator - Creates test encodings for different resolutions and bitrates
+- [x] QualityMetricsCalculator - Calculates VMAF and PSNR metrics
+- [x] DataAggregator - Combines metrics and analysis to determine content complexity
+- [x] RecommendationEngine - Generates optimized encoding ladder using convex hull
+- [x] OutputGenerator - Creates final JSON report with recommendations
+
+## Contributing
+
+Contributions are welcome! Feel free to:
+
+- Submit issues for bugs or feature ideas
+- Fork the repository and submit pull requests
+- Suggest improvements to the encoding optimization algorithms
 
 ## License
 
