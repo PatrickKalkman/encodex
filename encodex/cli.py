@@ -92,13 +92,15 @@ def run_full_workflow(args):
     """
     input_file = args.input
     output_path = args.output
+    use_gpu = args.use_gpu # Extract use_gpu flag from args
 
     try:
         # Create initial state
         initial_state = EncodExState(input_file=input_file)
 
         # Create and run the workflow
-        workflow = create_graph()
+        # Pass use_gpu flag to graph creation
+        workflow = create_graph(use_gpu=use_gpu)
         # Convert initial state object to dict for LangGraph invocation
         initial_state_dict = initial_state.model_dump(exclude_unset=True)
         # Invoke the workflow with the state dictionary directly
