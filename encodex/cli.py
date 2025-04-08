@@ -101,13 +101,11 @@ def run_full_workflow(args):
         workflow = create_graph()
         # Convert initial state object to dict for LangGraph invocation
         initial_state_dict = initial_state.model_dump(exclude_unset=True)
-        # LangGraph typically returns the final state dictionary
-        final_state_dict = workflow.invoke({"state": initial_state_dict})
+        # Invoke the workflow with the state dictionary directly
+        final_state_dict = workflow.invoke(initial_state_dict)
 
-        # Extract the actual state object, assuming it's under the 'state' key
         # Re-validate the final state dictionary back into an EncodExState object
-        final_state_data = final_state_dict.get("state") if isinstance(final_state_dict, dict) else {}
-        final_state_obj = EncodExState(**final_state_data) if final_state_data else None
+        final_state_obj = EncodExState(**final_state_dict) if isinstance(final_state_dict, dict) else None
 
         # Check for errors in the final state
         if not final_state_obj or not isinstance(final_state_obj, EncodExState):
