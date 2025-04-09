@@ -30,7 +30,10 @@ def _create_output_json(state: EnCodexState) -> Dict[str, Any]:
 
     # Prepare metadata section
     metadata = {
-        "duration": f"{int(state.video_metadata.duration // 3600):02d}:{int((state.video_metadata.duration % 3600) // 60):02d}:{int(state.video_metadata.duration % 60):02d}",
+        "duration": (
+            f"{int(state.video_metadata.duration // 3600):02d}:{int((state.video_metadata.duration % 3600) // 60):02d}"
+            ":{int(state.video_metadata.duration % 60):02d}"
+        ),
         "original_resolution": f"{state.video_metadata.width}x{state.video_metadata.height}",
         "fps": state.video_metadata.fps,
     }

@@ -163,18 +163,21 @@ def aggregate_data(state: EnCodexState) -> EnCodexState:
 
     # Calculate bitrate vs. quality curves
     vmaf_curves = _calculate_bitrate_quality_curve(state.quality_metrics, use_vmaf=True)
-    psnr_curves = _calculate_bitrate_quality_curve(state.quality_metrics, use_vmaf=False)
+    _calculate_bitrate_quality_curve(state.quality_metrics, use_vmaf=False)
 
     # Log some summary statistics
     for resolution, bitrate_quality in vmaf_curves.items():
         bitrates = sorted(bitrate_quality.keys())
         if bitrates:
             min_bitrate = bitrates[0]
-            max_bitrate = bitrates[-1]
+            # max_bitrate = bitrates[-1]
             min_vmaf = bitrate_quality[min_bitrate]
-            max_vmaf = bitrate_quality[max_bitrate]
+            # max_vmaf = bitrate_quality[max_bitrate]
             logger.info(
-                f"Resolution {resolution}: VMAF range {min_vmaf:.1f} @ {min_bitrate}k to {max_vmaf:.1f} @ {max_bitrate}k"
+                (
+                    f"Resolution {resolution}: VMAF range {min_vmaf:.1f} "
+                    "@ {min_bitrate}k to {max_vmaf:.1f} @ {max_bitrate}k"
+                )
             )
 
     # Determine complexity category

@@ -254,7 +254,10 @@ def calculate_quality_metrics(state: EnCodexState) -> EnCodexState:
 
         # Log results
         logger.info(
-            f"Calculated metrics for {os.path.basename(encoding.path)}: VMAF={vmaf_result['vmaf']:.2f}, PSNR={psnr_value:.2f}"
+            (
+                f"Calculated metrics for {os.path.basename(encoding.path)}: "
+                "VMAF={vmaf_result['vmaf']:.2f}, PSNR={psnr_value:.2f}"
+            )
         )
 
         # Create quality metric object

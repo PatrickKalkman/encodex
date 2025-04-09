@@ -10,13 +10,9 @@ from typing import Any, Dict, List, Optional
 
 from google import genai
 
-from encodex.graph_state import (  # Grouped imports
-    AnimationType,
-    ContentAnalysis,
-    ContentCharacteristic,
-    EnCodexState,
-    Segment,  # Added Segment
-)
+from encodex.graph_state import AnimationType  # Grouped imports
+from encodex.graph_state import Segment  # Added Segment
+from encodex.graph_state import ContentAnalysis, ContentCharacteristic, EnCodexState
 
 # Regex to check if the input looks like a Gemini File API URI (e.g., "files/...")
 GEMINI_FILE_URI_PATTERN = r"^files\/[a-zA-Z0-9_-]+$"
@@ -583,7 +579,10 @@ def analyze_content(state: EnCodexState) -> EnCodexState:
                 # --- Adjust Segment Timestamps ---
                 if "representative_segments" in analysis_data:
                     print(
-                        f"Adjusting timestamps for {len(analysis_data['representative_segments'])} segments by {chunk_start_offset:.3f}s..."
+                        (
+                            f"Adjusting timestamps for {len(analysis_data['representative_segments'])}"
+                            " segments by {chunk_start_offset:.3f}s..."
+                        )
                     )
                     adjusted_segments = []
                     for raw_seg in analysis_data["representative_segments"]:
@@ -602,7 +601,10 @@ def analyze_content(state: EnCodexState) -> EnCodexState:
                             raw_seg["timestamp_range"] = f"{format_seconds(abs_start)} - {format_seconds(abs_end)}"
                             adjusted_segments.append(raw_seg)
                             print(
-                                f"  Adjusted segment: {raw_seg.get('description', 'N/A')[:30]}... -> {raw_seg['timestamp_range']}"
+                                (
+                                    f"  Adjusted segment: {raw_seg.get('description', 'N/A')[:30]}..."
+                                    " -> {raw_seg['timestamp_range']}"
+                                )
                             )
 
                         except Exception as seg_e:
@@ -629,7 +631,10 @@ def analyze_content(state: EnCodexState) -> EnCodexState:
             # Ensure chunk_durations has the same length as all_results
             if len(chunk_durations) != len(all_results):
                 print(
-                    f"Warning: Mismatch between results ({len(all_results)}) and durations ({len(chunk_durations)}). Using equal weights for aggregation."
+                    (
+                        f"Warning: Mismatch between results ({len(all_results)}) "
+                        "and durations ({len(chunk_durations)}). Using equal weights for aggregation."
+                    )
                 )
                 # Fallback to equal weights if durations are inconsistent
                 num_results = len(all_results)
