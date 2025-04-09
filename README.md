@@ -7,7 +7,7 @@
 
 ![EnCodex Cover](cover.jpg)
 
-[![GitHub Actions Status](https://img.shields.io/github/actions/workflow/status/PatrickKalkman/encodex/ci.yml?branch=main)](https://github.com/PatrickKalkman/encodex/actions)
+[![GitHub Actions Status](https://img.shields.io/github/actions/workflow/status/PatrickKalkman/encodex/ci.yml?branch=master)](https://github.com/PatrickKalkman/encodex/actions)
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 [![GitHub stars](https://img.shields.io/github/stars/PatrickKalkman/encodex)](https://github.com/PatrickKalkman/encodex/stargazers)
 [![GitHub last commit](https://img.shields.io/github/last-commit/PatrickKalkman/encodex)](https://github.com/PatrickKalkman/encodex)
