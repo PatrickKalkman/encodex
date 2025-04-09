@@ -2,6 +2,18 @@
 
 > _AI-Driven Video Encoding Optimization System_
 
+> **Implementation Details:** For an in-depth look at EnCodex's architecture and development process, read our Medium article:  
+> [EnCodex: How AI is Revolutionizing Video Streaming Quality](https://medium.com/ai-advances/encodex-how-ai-is-revolutionizing-video-streaming-quality-b69f0c95b8fa)
+
+![EnCodex Cover](cover.jpg)
+
+[![GitHub Actions Status](https://img.shields.io/github/actions/workflow/status/PatrickKalkman/encodex/ci.yml?branch=main)](https://github.com/PatrickKalkman/encodex/actions)
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
+[![GitHub stars](https://img.shields.io/github/stars/PatrickKalkman/encodex)](https://github.com/PatrickKalkman/encodex/stargazers)
+[![GitHub last commit](https://img.shields.io/github/last-commit/PatrickKalkman/encodex)](https://github.com/PatrickKalkman/encodex)
+[![open issues](https://img.shields.io/github/issues/PatrickKalkman/encodex)](https://github.com/PatrickKalkman/encodex/issues)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
+
 EnCodex uses AI to analyze video content and generate optimized encoding parameters based on content complexity. It leverages Google's Gemini 2.5 Pro for video content analysis and implements a LangGraph-based workflow for step-by-step processing with convex hull optimization for encoding ladders.
 
 ## Features
