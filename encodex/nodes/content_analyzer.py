@@ -10,9 +10,13 @@ from typing import Any, Dict, List, Optional
 
 from google import genai
 
-from encodex.graph_state import AnimationType  # Grouped imports
-from encodex.graph_state import Segment  # Added Segment
-from encodex.graph_state import ContentAnalysis, ContentCharacteristic, EnCodexState
+from encodex.graph_state import (
+    AnimationType,  # Grouped imports
+    ContentAnalysis,
+    ContentCharacteristic,
+    EnCodexState,
+    Segment,  # Added Segment
+)
 
 # Regex to check if the input looks like a Gemini File API URI (e.g., "files/...")
 GEMINI_FILE_URI_PATTERN = r"^files\/[a-zA-Z0-9_-]+$"
